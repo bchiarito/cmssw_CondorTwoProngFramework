@@ -34,6 +34,7 @@ help="overwrite job directory if it already exists")
 args = parser.parse_args()
 
 # constants
+submit_file_filename = 'submit_file.jdl'
 input_file_filename = 'infiles.dat'
 finalfile_filename = 'NANOAOD_TwoProng.root'
 owner = 'chiarito'
@@ -65,11 +66,18 @@ if args.output_hexcms == False and args.output_cmslpc == False:
   if args.site == "hexcms": args.output_hexcms = True
   if args.site == "cmslpc": args.output_cmslpc = True
 
+# make job directory
+if os.path.isdir("./"+args.dir) and not args.force:
+  raise Exception("Directory " + args.dir + " already exists. Use option -f to overwrite")
+if os.path.isdir("./"+args.dir) and args.force:
+  subprocess.call(['rm', '-rf', "./"+args.dir])
+subprocess.call(['mkdir', args.dir])
+
 # setup based on triple: running location, input location, output location
 if args.site == "hexcms" and args.input_hexcms and args.output_hexcms:
-  print "Running on hexcms, input data located on hexcms, output written to hexcms\n"
+  print "\nRunning on hexcms, input data located on hexcms, output written to hexcms\n"
   # discover data
-  print "Doing input discovery"
+  print "Doing Input Data Discovery"
   cmd = 'ls -1 {}/*'.format(args.input)
   output = subprocess.check_output(cmd, shell=True)
   output = output.split('\n')
@@ -106,6 +114,7 @@ if args.site == "cmslpc" and args.input_cmslpc and args.output_cmslpc:
 with open(input_file_filename, 'w') as input_file:
   for line in input_files:
     input_file.write(line)
+os.system('mv ' + input_file_filename + ' ' + args.dir)
 
 # prepare unpacker script
 to_replace = {}
@@ -113,6 +122,7 @@ template_filename = unpacker_template_filename
 replaced_filename = unpacker_filename
 to_replace['__inputfilefilename__'] = input_file_filename
 use_template_to_replace(template_filename, replaced_filename, to_replace)
+os.system('mv ' + replaced_filename + ' ' + args.dir)
 
 # prepare stageout script
 to_replace = {}
@@ -121,15 +131,9 @@ to_replace['__outputlocation__'] = args.output
 template_filename = stageout_template_filename
 replaced_filename = stageout_filename
 use_template_to_replace(template_filename, replaced_filename, to_replace)
+os.system('mv ' + replaced_filename + ' ' + args.dir)
 
-# make job directory
-if os.path.isdir("./"+args.dir) and not args.force:
-  raise Exception("Directory " + args.dir + " already exists. Use option -f to overwrite")
-if os.path.isdir("./"+args.dir) and args.force:
-  subprocess.call(['rm', '-rf', "./"+args.dir])
-subprocess.call(['mkdir', args.dir])
-
-# define the jobs
+# define submit files
 sub = htcondor.Submit()
 sub['executable'] = 'condor_execute_hexcms.sh'
 sub['arguments'] = unpacker_filename + " " + stageout_filename
@@ -138,22 +142,22 @@ sub['+JobFlavor'] = 'longlunch'
 sub['Notification'] = 'Never'
 sub['x509userproxy'] = ''
 sub['transfer_input_files'] = \
-  unpacker_filename + ", " + stageout_filename + ", " + input_file_filename
-sub['transfer_output_files'] = ''
-sub['transfer_output_remaps'] = ''
+  args.dir+'/'+unpacker_filename + ", " + \
+  args.dir+'/'+stageout_filename + ", " + \
+  args.dir+'/'+input_file_filename
+sub['transfer_output_files'] = '""'
 sub['initialdir'] = ''
 sub['output'] = args.dir+'/$(Cluster)_$(Process)_out.txt'
 sub['error'] = args.dir+'/$(Cluster)_$(Process)_out.txt'
 sub['log'] = args.dir+'/$(Cluster)_log.txt'
-print ""
-print "submit file:"
-print sub
-print ""
+with open(submit_file_filename, 'w') as f:
+  f.write(sub.__str__())
+os.system('mv ' + submit_file_filename + ' ' + args.dir)
 
 # get the schedd
 coll = htcondor.Collector()
 sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
-print "Found these scheds:"
+print "Found These Schedds:"
 for s in sched_query:
   print "  ", s["Name"]
 schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
@@ -161,11 +165,12 @@ print "Picked:", schedd_ad["Name"] + "\n"
 schedd = htcondor.Schedd(schedd_ad)
 
 # submit the job
+print "Submitting Jobs"
 with schedd.transaction() as txn:
   print "ClusterId: ", sub.queue(txn)
 
 # query job
-print "\nAll jobs for user:"
+print "\nCurrent Jobs for User:"
 for job in schedd.xquery(projection=['ClusterId', 'ProcId', 'JobStatus', 'Owner']):
   if not job['Owner'] == owner: continue
   print job.__repr__()
