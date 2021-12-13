@@ -11,8 +11,8 @@ ls -l
 echo ''
 
 echo '&&& Running input unpacker script with command: &&&'
-echo 'python' $1
-python $1 infiles.dat
+echo 'python' $1 $3
+python $1 $3
 echo ''
 echo '&&& Current directiory: &&&'
 pwd
@@ -65,7 +65,7 @@ ls -l
 
 echo ''
 echo '&&& Running Stageout Script with command &&&'
-echo 'python' $2
-python $2
+echo 'python' $2 $3
+python $2 $3
 echo ''
 echo '&&& Finished &&&'

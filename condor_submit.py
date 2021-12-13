@@ -5,6 +5,8 @@ import sys
 import subprocess
 import os
 import copy
+import math
+from itertools import izip_longest
 # command line options
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("site", 
@@ -25,7 +27,7 @@ output_options.add_argument("--output_cmslpc", action="store_true",
 help="indicate that output should be written to cmslpc")
 parser.add_argument("-d", "--dir", default="my_condor_job",
 help="name of job directory, created in current directory")
-parser.add_argument("-n", "--num", default=1,
+parser.add_argument("-n", "--num", default=1, type=int,
 help="number of subjobs in the job")
 parser.add_argument("-v", "--verbose", action="store_true",
 help="ask for verbose output")
@@ -34,16 +36,20 @@ help="overwrite job directory if it already exists")
 args = parser.parse_args()
 
 # constants
-submit_file_filename = 'submit_file.jdl'
-input_file_filename = 'infiles.dat'
-finalfile_filename = 'NANOAOD_TwoProng.root'
 owner = 'chiarito'
+submit_file_filename = 'submit_file.jdl'
+input_file_filename_base = 'infiles'
+finalfile_filename = 'NANOAOD_TwoProng.root'
 unpacker_filename = 'unpacker.py'
-unpacker_hexcms_template_filename = 'template_unpacker_hexcms.py'
 stageout_filename = 'stageout.py'
 stageout_hexcms_template_filename = 'template_stageout_hexcms.py'
+unpacker_hexcms_template_filename = 'template_unpacker_hexcms.py'
 
 # subroutines
+def grouper(iterable, n, fillvalue=None):
+  args = [iter(iterable)] * n
+  return izip_longest(*args, fillvalue=fillvalue)
+
 def use_template_to_replace(template_filename, replaced_filename, to_replace):
   with open(template_filename, 'r') as template:
     base = template.read()
@@ -110,17 +116,26 @@ if args.site == "cmslpc" and args.input_cmslpc and args.output_cmslpc:
   print "Running on cmslpc, input data located on cmslpc, output written to cmslpc"
 
 # splitting
-#job_splitting = [input_files] # PLACEHOLDER one job that processes all the files found in the directory
-with open(input_file_filename, 'w') as input_file:
-  for line in input_files:
-    input_file.write(line)
-os.system('mv ' + input_file_filename + ' ' + args.dir)
+input_filenames = []
+num_total_files = len(input_files)
+num_total_jobs = args.num
+num_files_per_job = math.ceil(num_total_files / float(num_total_jobs))
+N = int(num_files_per_job)
+for count,set_of_lines in enumerate(grouper(input_files, N, '')):
+  with open(input_file_filename_base+'_'+str(count)+'.dat', 'w') as fi:
+    for line in set_of_lines:
+      if line == '': continue
+      fi.write(line+'\n')
+    input_filenames.append(os.path.basename(fi.name))
+for filename in input_filenames:
+  os.system('mv ' + filename + ' ' + args.dir)
+TOTAL_JOBS = len(input_filenames)
 
 # prepare unpacker script
 to_replace = {}
 template_filename = unpacker_template_filename
 replaced_filename = unpacker_filename
-to_replace['__inputfilefilename__'] = input_file_filename
+to_replace['__inputfilefilenamebase__'] = input_file_filename_base
 use_template_to_replace(template_filename, replaced_filename, to_replace)
 os.system('mv ' + replaced_filename + ' ' + args.dir)
 
@@ -136,7 +151,7 @@ os.system('mv ' + replaced_filename + ' ' + args.dir)
 # define submit files
 sub = htcondor.Submit()
 sub['executable'] = 'condor_execute_hexcms.sh'
-sub['arguments'] = unpacker_filename + " " + stageout_filename
+sub['arguments'] = unpacker_filename + " " + stageout_filename + " $(Process)"
 sub['should_transfer_files'] = 'YES'
 sub['+JobFlavor'] = 'longlunch'
 sub['Notification'] = 'Never'
@@ -144,7 +159,7 @@ sub['x509userproxy'] = ''
 sub['transfer_input_files'] = \
   args.dir+'/'+unpacker_filename + ", " + \
   args.dir+'/'+stageout_filename + ", " + \
-  args.dir+'/'+input_file_filename
+  args.dir+'/'+input_file_filename_base+'_$(Process).dat'
 sub['transfer_output_files'] = '""'
 sub['initialdir'] = ''
 sub['output'] = args.dir+'/$(Cluster)_$(Process)_out.txt'
@@ -167,7 +182,7 @@ schedd = htcondor.Schedd(schedd_ad)
 # submit the job
 print "Submitting Jobs"
 with schedd.transaction() as txn:
-  print "ClusterId: ", sub.queue(txn)
+  print "ClusterId: ", sub.queue(txn, count=TOTAL_JOBS)
 
 # query job
 print "\nCurrent Jobs for User:"
