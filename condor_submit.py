@@ -13,23 +13,23 @@ parser = argparse.ArgumentParser(description="")
 parser.add_argument("site", 
 help="indicate where script is running, hexcms or cmslpc")
 parser.add_argument("input", 
-help="location containing MiniAODv1 files to process")
+help="directory containing MiniAOD files to process, or single MiniAOD file")
 input_options = parser.add_mutually_exclusive_group()
 input_options.add_argument("--input_hexcms", action="store_true",
-help="indicate that input is on hexcms")
+help="indicate that input is on hexcms (default is same as site)")
 input_options.add_argument("--input_cmslpc", action="store_true",
-help="indicate that input is on cmslpc")
+help="indicate that input is on cmslpc (default is same as site)")
 parser.add_argument("output", 
-help="output eos storage to write output to with xrdcp")
+help="output eos storage to write output to")
 output_options = parser.add_mutually_exclusive_group()
 output_options.add_argument("--output_hexcms", action="store_true",
-help="indicate that output should be written to hexcms")
+help="indicate that output should be written to hexcms (default is same as site)")
 output_options.add_argument("--output_cmslpc", action="store_true",
-help="indicate that output should be written to cmslpc")
+help="indicate that output should be written to cmslpc (default is same as site)")
 parser.add_argument("-d", "--dir", default="my_condor_job",
 help="name of job directory, created in current directory")
 parser.add_argument("-n", "--num", default=1, type=int,
-help="number of subjobs in the job")
+help="number of subjobs in the job (default is 1)")
 parser.add_argument("-v", "--verbose", action="store_true",
 help="ask for verbose output")
 parser.add_argument("-f", "--force", action="store_true",
@@ -38,7 +38,9 @@ parser.add_argument("-s", "--short", default=False, action="store_true",
 help="for a short job (fast run time) also wait using condor_wait")
 parser.add_argument("-b", "--rebuild", default=False, action="store_true",
 help="remake scratch directory and src/ area needed to ship with job")
-# not used yet v
+parser.add_argument("-t", "--test", default=False, action="store_true",
+help="don't submit condor job but do all other steps")
+# not used yet
 parser.add_argument("-y", "--year", default="UL18",
 help="prescription to follow, e.g., UL18, UL17, UL16")
 mc_options = parser.add_mutually_exclusive_group()
@@ -46,25 +48,23 @@ mc_options.add_argument("--mc", action="store_true",
 help="running on mc")
 mc_options.add_argument("--data", action="store_true",
 help="running on data")
-# ^
 args = parser.parse_args()
 
 # constants
 owner = 'chiarito'
+src_setup_script = 'cmssw_src_setup.sh'
 submit_file_filename = 'submit_file.jdl'
-input_file_filename_base = 'infiles'
+input_file_filename_base = 'infiles' # also assumed in execute file
 finalfile_filename = 'NANOAOD_TwoProng.root'
 unpacker_filename = 'unpacker.py'
 stageout_filename = 'stageout.py'
 stageout_hexcms_template_filename = 'template_stageout_hexcms.py'
 unpacker_hexcms_template_filename = 'template_unpacker_hexcms.py'
-src_setup_script = 'cmssw_src_setup.sh'
 
 # subroutines
 def grouper(iterable, n, fillvalue=None):
   args = [iter(iterable)] * n
   return izip_longest(*args, fillvalue=fillvalue)
-
 def use_template_to_replace(template_filename, replaced_filename, to_replace):
   with open(template_filename, 'r') as template:
     base = template.read()
@@ -78,6 +78,17 @@ def use_template_to_replace(template_filename, replaced_filename, to_replace):
 # check valid site
 if not args.site == "hexcms" and not args.site == "cmslpc":
   raise Exception("Error: site must be 'hexcms' or 'cmslpc'")
+
+# check invalid option combinations
+if args.site == "hexcms" and args.input_hexcms and args.output_cmslpc:
+  print "Running on hexcms, input data located on hexcms, output written to hexcms"
+  raise Exception("Unsupported Combination of input and output locations")
+if args.site == "hexcms" and args.input_cmslpc and args.output_hexcms:
+  print "Running on hexcms, input data located on cmslpc, output written to hexcms"
+  raise Exception("Unsupported Combination of input and output locations")
+if args.site == "hexcms" and args.input_cmslpc and args.output_cmslpc:
+  print "Running on hexcms, input data located on cmslpc, output written to cmslpc"
+  raise Exception("Unsupported Combination of input and output locations")
 
 # defaults for location of input and output
 if args.input_hexcms == False and args.input_cmslpc == False:
@@ -96,38 +107,33 @@ print "Job Directory :", args.dir
 subprocess.call(['mkdir', args.dir])
 print ""
 
-if args.site == "hexcms" and args.input_hexcms and args.output_cmslpc:
-  print "Running on hexcms, input data located on hexcms, output written to hexcms"
-  raise Exception("Unsupported Combination of input and output locations")
-if args.site == "hexcms" and args.input_cmslpc and args.output_hexcms:
-  print "Running on hexcms, input data located on cmslpc, output written to hexcms"
-  raise Exception("Unsupported Combination of input and output locations")
-if args.site == "hexcms" and args.input_cmslpc and args.output_cmslpc:
-  print "Running on hexcms, input data located on cmslpc, output written to cmslpc"
-  raise Exception("Unsupported Combination of input and output locations")
-
 # datafile discovery
 print "Doing Input Data Discovery ..."
+input_files = []
 if args.site == "hexcms" and args.input_hexcms:
-  if args.input[len(args.input)-1] == '/': args.input = args.input[0:len(args.input)-1]
-  cmd = 'ls -1 {}/*'.format(args.input)
-  output = subprocess.check_output(cmd, shell=True)
-  output = output.split('\n')
-  input_files = []
-  for line in output:
-    if not line.find(".root") == -1:
-      input_files.append(line)
-      print "  discoverd: ", line
-  print ""
-  # set scripts
   unpacker_template_filename = unpacker_hexcms_template_filename
-  stageout_template_filename = stageout_hexcms_template_filename
+  if os.path.isfile(args.input):
+    print "  discoverd: ", args.input
+    input_files.append(args.input)
+    print ""
+  if os.path.isdir(args.input):
+    if args.input[len(args.input)-1] == '/': args.input = args.input[0:len(args.input)-1]
+    cmd = 'ls -1 {}/*'.format(args.input)
+    output = subprocess.check_output(cmd, shell=True)
+    output = output.split('\n')
+    for line in output:
+      if not line.find(".root") == -1:
+        input_files.append(line)
+        print "  discoverd: ", line
+    print ""
 
 # checking output location
 if args.site == "hexcms" and args.output_hexcms:
+  stageout_template_filename = stageout_hexcms_template_filename
   if not os.path.isdir(args.output):
     print "Making output directory because it does not already exist..."
     os.system('mkdir -p ' + args.output)
+    print ""
 
 # splitting and prepare input_files file
 input_filenames = []
@@ -216,6 +222,9 @@ print "Picked:", schedd_ad["Name"] + "\n"
 schedd = htcondor.Schedd(schedd_ad)
 
 # submit the job
+if args.test:
+  print "Just a test, Exiting."
+  sys.exit()
 print "Submitting Jobs ..."
 with schedd.transaction() as txn:
   cluster_id = sub.queue(txn, count=TOTAL_JOBS)
