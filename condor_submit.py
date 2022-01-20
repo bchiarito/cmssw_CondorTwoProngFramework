@@ -266,3 +266,8 @@ if args.short:
   print "Waiting on job with condor_wait ...\n"
   time.sleep(1)
   os.system('condor_wait -echo ' + args.dir + '/' + str(cluster_id) + '_log.txt')
+
+# cleanup job directory
+time.sleep(60)
+os.system("rm " + args.dir + "/" + input_file_filename_base + "*.dat")
+os.system("rm " + args.dir + "/cmssw_" + input_file_filename_base + "*.dat")
