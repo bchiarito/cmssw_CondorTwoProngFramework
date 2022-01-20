@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(description="")
 parser.add_argument("site", 
 help="indicate where script is running, hexcms or cmslpc")
 parser.add_argument("input", 
-help="directory containing MiniAOD files to process, or single MiniAOD file")
+help="directory containing MiniAOD files to process, or single MiniAOD file, or a .txt file with file locations one per line")
 input_options = parser.add_mutually_exclusive_group()
 input_options.add_argument("--input_hexcms", action="store_true",
 help="indicate that input is on hexcms (default is same as site)")
@@ -40,6 +40,10 @@ parser.add_argument("-b", "--rebuild", default=False, action="store_true",
 help="remake scratch directory and src/ area needed to ship with job")
 parser.add_argument("-t", "--test", default=False, action="store_true",
 help="don't submit condor job but do all other steps")
+parser.add_argument("-p", "--proxy", default="",
+help="path to x509userproxy file, required on cmslpc")
+parser.add_argument("-o", "--owner", default="chiarito",
+help="condor username, only needed for use with --short option")
 # not used yet
 parser.add_argument("-y", "--year", default="UL18",
 help="prescription to follow, e.g., UL18, UL17, UL16")
@@ -51,7 +55,6 @@ help="running on data")
 args = parser.parse_args()
 
 # constants
-owner = 'chiarito'
 src_setup_script = 'cmssw_src_setup.sh'
 submit_file_filename = 'submit_file.jdl'
 input_file_filename_base = 'infiles' # also assumed in execute file
@@ -59,7 +62,9 @@ finalfile_filename = 'NANOAOD_TwoProng.root'
 unpacker_filename = 'unpacker.py'
 stageout_filename = 'stageout.py'
 stageout_hexcms_template_filename = 'template_stageout_hexcms.py'
+stageout_cmslpc_template_filename = 'template_stageout_cmslpc.py'
 unpacker_hexcms_template_filename = 'template_unpacker_hexcms.py'
+unpacker_cmslpc_template_filename = 'template_unpacker_cmslpc.py'
 
 # subroutines
 def grouper(iterable, n, fillvalue=None):
@@ -110,8 +115,17 @@ print ""
 # datafile discovery
 print "Doing Input Data Discovery ..."
 input_files = []
-if args.site == "hexcms" and args.input_hexcms:
-  unpacker_template_filename = unpacker_hexcms_template_filename
+loc = args.input
+if loc[len(loc)-4:len(loc)] == ".txt":
+  print "Found input .txt file with file locations"
+  with open(args.input) as f:
+    for line in f:
+      input_files.append(line.strip())
+      print "  discoverd: ", line.strip()
+  txt_file = True
+if args.input_cmslpc: unpacker_template_filename = unpacker_cmslpc_template_filename
+if args.input_hexcms: unpacker_template_filename = unpacker_hexcms_template_filename
+if not txt_file and args.site == "hexcms" and args.input_hexcms:
   if os.path.isfile(args.input):
     print "  discoverd: ", args.input
     input_files.append(args.input)
@@ -126,6 +140,12 @@ if args.site == "hexcms" and args.input_hexcms:
         input_files.append(line)
         print "  discoverd: ", line
     print ""
+if not txt_file and args.site == "cmslpc" and args.input_cmslpc:
+  list_of_files = subprocess.check_output("xrdfs root://cmseos.fnal.gov ls -u " + args.input, shell=True)
+  list_of_files = list_of_files.split('\n')
+  for line in list_of_files:
+    input_files.append(line)
+    print "  discoverd: ", line
 
 # checking output location
 if args.site == "hexcms" and args.output_hexcms:
@@ -134,6 +154,10 @@ if args.site == "hexcms" and args.output_hexcms:
     print "Making output directory because it does not already exist..."
     os.system('mkdir -p ' + args.output)
     print ""
+if args.site == "cmslpc" and args.output_cmslpc:
+  stageout_template_filename = stageout_cmslpc_template_filename
+  print "Ensuring output location exists..."
+  os.system("eos root://cmseos.fnal.gov mkdir -p " + args.output)
 
 # splitting and prepare input_files file
 input_filenames = []
@@ -190,7 +214,7 @@ sub['arguments'] = unpacker_filename + " " + stageout_filename + " $(Process)"
 sub['should_transfer_files'] = 'YES'
 sub['+JobFlavor'] = 'longlunch'
 sub['Notification'] = 'Never'
-sub['x509userproxy'] = ''
+sub['x509userproxy'] = args.proxy
 sub['transfer_input_files'] = \
   args.dir+'/'+unpacker_filename + ", " + \
   args.dir+'/'+stageout_filename + ", " + \
@@ -217,7 +241,7 @@ sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress
 print "Found These Schedds:"
 for s in sched_query:
   print "  ", s["Name"]
-schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
+schedd_ad = sched_query[0]
 print "Picked:", schedd_ad["Name"] + "\n"
 schedd = htcondor.Schedd(schedd_ad)
 
@@ -233,7 +257,7 @@ with schedd.transaction() as txn:
 # query job
 print "\nCurrent Jobs for User:"
 for job in schedd.xquery(projection=['ClusterId', 'ProcId', 'JobStatus', 'Owner']):
-  if not job['Owner'] == owner: continue
+  if not job['Owner'] == args.owner: continue
   print job.__repr__()
 print ""
 
