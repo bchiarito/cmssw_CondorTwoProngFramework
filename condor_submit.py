@@ -100,6 +100,7 @@ elif 'cern.ch' in hostname: site = 'lxplus'
 else: raise Exception('Unrecognized site: not hexcms, cmslpc, or lxplus')
 
 # check input
+input_loc_not_set = False
 if args.input_hexcms == False and args.input_cmslpc == False and args.input_dataset == False:
   input_loc_not_set = True
 if input_loc_not_set and site == "hexcms": args.input_hexcms = True
@@ -154,11 +155,11 @@ if args.output_hexcms == False and args.output_cmslpc == False:
   if site == "cmslpc": args.output_cmslpc = True
 if site == "hexcms" and args.output_hexcms:
   if not os.path.isdir(args.output):
-    print "Making output directory, because it does not already exist..."
+    print "\nMaking output directory, because it does not already exist..."
     os.system('mkdir -p ' + args.output)
     print ""
 if site == "cmslpc" and args.output_cmslpc:
-  print "Ensuring output eos location exists..."
+  print "\nEnsuring output eos location exists..."
   os.system("eos root://cmseos.fnal.gov mkdir -p " + args.output)
 
 # make job directory
