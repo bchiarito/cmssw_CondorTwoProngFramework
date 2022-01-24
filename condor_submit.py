@@ -53,8 +53,8 @@ help="indicate that input is official dataset")
 parser.add_argument("output", 
 help="directory or eos storage (/store/user/...) to write output to")
 output_options = parser.add_mutually_exclusive_group()
-output_options.add_argument("--output_hexcms", action="store_true",
-help="indicate that output should be written to hexcms (default is same as site)")
+output_options.add_argument("--output_local", action="store_true",
+help="indicate that output should be written to local filesystem (default if site is hexcms)")
 output_options.add_argument("--output_cmslpc", action="store_true",
 help="indicate that output should be written to cmslpc (default is same as site)")
 
@@ -100,6 +100,7 @@ elif 'cern.ch' in hostname: site = 'lxplus'
 else: raise Exception('Unrecognized site: not hexcms, cmslpc, or lxplus')
 
 # check input
+input_loc_not_set = False
 if args.input_hexcms == False and args.input_cmslpc == False and args.input_dataset == False:
   input_loc_not_set = True
 if input_loc_not_set and site == "hexcms": args.input_hexcms = True
@@ -137,11 +138,16 @@ if not txt_file and args.input_hexcms and site == "cmslpc":
   raise Exception("Not supported running on cmslpc with input data on hexcms.")
 # input is eos area on cmslc
 if not txt_file and args.input_cmslpc:
-  list_of_files = subprocess.check_output("xrdfs root://cmseos.fnal.gov ls -u " + args.input, shell=True)
-  list_of_files = list_of_files.split('\n')
-  for line in list_of_files:
-    input_files.append(line)
-    print "  found eos file: ", line
+  if s[len(s)-5:len(s)] == ".root":
+    print "  found eos file: ", args.input
+    input_files.append(args.input)
+  else:
+    list_of_files = subprocess.check_output("xrdfs root://cmseos.fnal.gov ls -u " + args.input, shell=True)
+    list_of_files = list_of_files.split('\n')
+    for line in list_of_files:
+      input_files.append(line)
+      print "  found eos file: ", line
+# input is dataset name
 if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
    re.match("(?:" + "/.*/.*/MINIAODSIM" + r")\Z", args.input):
   args.input_dataset = True
@@ -149,18 +155,33 @@ if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
   # use txt file to fill input_files, just line by line
   raise Exception('Intput dataset name directorly not implemented!')
 
+# test input
+if args.input_cmslpc:
+  ret = os.system('eos root://cmseos.fnal.gov ls ' + input_files[0] + ' > /dev/null')
+  if not ret == 0:
+    raise Exception('Input is not a valid file on cmslpc eos area!')
+if args.input_hexcms:
+  if not os.path.isfile(args.input) and not os.path.isdir(args.input):
+    raise Exception('Input is not a valid directory or file on hexcms!')
+if args.input_dataset:
+  if False: raise Exception()
+
 # check output
-if args.output_hexcms == False and args.output_cmslpc == False:
-  if site == "hexcms": args.output_hexcms = True
+if not args.output[0] == '/':
+  args.output_local = True
+if args.output_local == False and args.output_cmslpc == False:
+  if site == "hexcms": args.output_local = True
   if site == "cmslpc": args.output_cmslpc = True
-if site == "hexcms" and args.output_hexcms:
+if args.output_local:
   if not os.path.isdir(args.output):
-    print "Making output directory, because it does not already exist..."
-    os.system('mkdir -p ' + args.output)
-    print ""
+    print "\nMaking output directory, because it does not already exist..."
+    ret = os.system('mkdir -p ' + args.output)
+    if not ret == 0: raise Exception('Failed to create job output directory!')
 if site == "cmslpc" and args.output_cmslpc:
-  print "Ensuring output eos location exists..."
-  os.system("eos root://cmseos.fnal.gov mkdir -p " + args.output)
+  print "\nEnsuring output eos location exists..."
+  ret = os.system("eos root://cmseos.fnal.gov mkdir -p " + args.output)
+  if not ret == 0: raise Exception('Failed to create job output directory!')
+print ""
 
 # make job directory
 job_dir = args.dir
@@ -225,7 +246,7 @@ os.system('mv ' + replaced_filename + ' ' + job_dir)
 to_replace = {}
 to_replace['__finalfile__'] = finalfile_filename
 to_replace['__outputlocation__'] = args.output
-if args.output_hexcms and site == 'hexcms':
+if args.output_local:
   to_replace['__redirector__'] = ''
   to_replace['__copycommand__'] = 'cp'
 if args.output_cmslpc:
