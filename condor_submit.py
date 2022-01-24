@@ -107,6 +107,7 @@ if input_loc_not_set and site == "cmslpc": args.input_cmslpc = True
 print "Checking Input ..."
 input_files = [] # each entry a file location
 s = args.input
+txt_file = False
 # input is .txt file
 if s[len(s)-4:len(s)] == ".txt":
   print "Found input .txt file with file locations"
@@ -250,7 +251,8 @@ sub['arguments'] = unpacker_filename + " " + stageout_filename + " $(Process)"
 sub['should_transfer_files'] = 'YES'
 sub['+JobFlavor'] = 'longlunch'
 sub['Notification'] = 'Never'
-sub['use_x509userproxy'] = 'true'
+if site == 'cmslpc': sub['use_x509userproxy'] = 'true'
+if site == 'hexcms': sub['x509userproxy'] = ''
 sub['transfer_input_files'] = \
   job_dir+'/'+unpacker_filename + ", " + \
   job_dir+'/'+stageout_filename + ", " + \
@@ -276,7 +278,8 @@ sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress
 print "Found These Schedds:"
 for s in sched_query:
   print "  ", s["Name"]
-schedd_ad = sched_query[0]
+if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
+if site == 'cmslpc': schedd_ad = sched_query[0]
 print "Picked:", schedd_ad["Name"] + "\n"
 schedd = htcondor.Schedd(schedd_ad)
 
