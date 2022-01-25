@@ -43,21 +43,24 @@ parser = argparse.ArgumentParser(description="")
 parser.add_argument("input", 
 help="directory containing MiniAOD files, or a single MiniAOD file, \
 or .txt file with file locations (/store/user/... or /abs/path/to/file.root) one per line, \
-or dataset name (/*/*/MINIAOD(SIM))")
+or dataset name (/*/*/MINIAOD(SIM)). the --input_* options can be used to overwrite \
+automatic assumptions about input location.")
 input_options = parser.add_mutually_exclusive_group()
-input_options.add_argument("--input_hexcms", action="store_true",
-help="indicate that input is on hexcms")
+input_options.add_argument("--input_local", action="store_true",
+help="indicate that input is on the local filesystem")
 input_options.add_argument("--input_cmslpc", action="store_true",
-help="indicate that input is on cmslpc")
+help="indicate that input is an eos area on cmslpc")
 input_options.add_argument("--input_dataset", action="store_true",
 help="indicate that input is official dataset")
 parser.add_argument("output", 
-help="directory or eos storage (/store/user/...) to write output to")
+help="local directory or eos storage (/store/user/...) to write output to, \
+the --output_* options can be used to overwite automatic assumptons \
+about output location.")
 output_options = parser.add_mutually_exclusive_group()
 output_options.add_argument("--output_local", action="store_true",
-help="indicate that output should be written to local filesystem (default if site is hexcms)")
+help="indicate that output should be written to local filesystem")
 output_options.add_argument("--output_cmslpc", action="store_true",
-help="indicate that output should be written to cmslpc (default is same as site)")
+help="indicate that output should be written to an eos area on cmslpc")
 
 # job structure
 parser.add_argument("-n", "--num", default=1, type=int,
@@ -101,11 +104,11 @@ elif 'cern.ch' in hostname: site = 'lxplus'
 else: raise Exception('Unrecognized site: not hexcms, cmslpc, or lxplus')
 
 # check input
-input_loc_not_set = False
-if args.input_hexcms == False and args.input_cmslpc == False and args.input_dataset == False:
-  input_loc_not_set = True
-if input_loc_not_set and site == "hexcms": args.input_hexcms = True
-if input_loc_not_set and site == "cmslpc": args.input_cmslpc = True
+input_not_set = False
+if args.input_local == False and args.input_cmslpc == False and args.input_dataset == False:
+  input_not_set = True
+if input_not_set and site == "hexcms": args.input_local = True
+if input_not_set and site == "cmslpc": args.input_cmslpc = True
 print "Checking Input ..."
 input_files = [] # each entry a file location
 s = args.input
@@ -119,7 +122,7 @@ if s[len(s)-4:len(s)] == ".txt":
       print "  input file: ", line.strip()
   txt_file = True
 # input is directory on hexcms, and running on hexcms
-if not txt_file and args.input_hexcms and site == "hexcms":
+if not txt_file and args.input_local and site == "hexcms":
   if os.path.isfile(args.input):
     print "  found local file: ", args.input
     input_files.append(args.input)
@@ -135,7 +138,7 @@ if not txt_file and args.input_hexcms and site == "hexcms":
         print "  found local file: ", line
     print ""
 # input is directory on hexcms, and running on cmslpc
-if not txt_file and args.input_hexcms and site == "cmslpc":
+if not txt_file and args.input_local and site == "cmslpc":
   raise Exception("Not supported running on cmslpc with input data on hexcms.")
 # input is eos area on cmslc
 if not txt_file and args.input_cmslpc:
@@ -161,18 +164,20 @@ if args.input_cmslpc:
   ret = os.system('eos root://cmseos.fnal.gov ls ' + input_files[0] + ' > /dev/null')
   if not ret == 0:
     raise Exception('Input is not a valid file on cmslpc eos area!')
-if args.input_hexcms:
+if args.input_local:
   if not os.path.isfile(args.input) and not os.path.isdir(args.input):
     raise Exception('Input is not a valid directory or file on hexcms!')
 if args.input_dataset:
   if False: raise Exception()
 
 # check output
+output_not_set = False
 if not args.output[0] == '/':
   args.output_local = True
-if args.output_local == False and args.output_cmslpc == False:
-  if site == "hexcms": args.output_local = True
-  if site == "cmslpc": args.output_cmslpc = True
+elif args.output_local == False and args.output_cmslpc == False:
+  output_not_set = True
+if output_not_set and site == "hexcms": args.output_local = True
+if output_not_set and site == "cmslpc": args.output_cmslpc = True
 if args.output_local:
   if not os.path.isdir(args.output):
     print "\nMaking output directory, because it does not already exist..."
@@ -184,16 +189,26 @@ if site == "cmslpc" and args.output_cmslpc:
   if not ret == 0: raise Exception('Failed to create job output directory!')
 print ""
 
+# print input/output assumptions
+if args.output_local: o = 'local'
+if args.output_cmslpc: o = 'cmslpc eos'
+if args.input_local: i = 'local'
+if args.input_cmslpc: i = 'cmslpc eos'
+if args.input_dataset: i = 'official dataset'
+print "Job Locations"
+print "Input : " + i
+print "Output: " + o + "\n"
+
 # make job directory
 job_dir = 'Job_' + args.dir
 if os.path.isdir("./"+job_dir) and not args.force:
   raise Exception("Directory " + job_dir + " already exists. Use option -f to overwrite")
 if os.path.isdir("./"+job_dir) and args.force:
-  subprocess.call(['rm', '-rf', "./"+job_dir])
-  #os.system('rm -rf ./' + job_dir)
+  #subprocess.call(['rm', '-rf', "./"+job_dir])
+  os.system('rm -rf ./' + job_dir)
 print "Job Directory :", job_dir
-subprocess.call(['mkdir', job_dir])
-#os.system('mkdir ' + job_dir)
+#subprocess.call(['mkdir', job_dir])
+os.system('mkdir ' + job_dir)
 print ""
 
 # splitting
@@ -230,7 +245,7 @@ to_replace = {}
 template_filename = unpacker_template_filename
 replaced_filename = unpacker_filename
 to_replace['__inputfilefilenamebase__'] = input_file_filename_base
-if args.input_hexcms and site == 'hexcms':
+if args.input_local and site == 'hexcms':
   to_replace['__redirector__'] = ''
   to_replace['__copycommand__'] = 'cp'
 if args.input_cmslpc:
@@ -296,7 +311,7 @@ with open(submit_file_filename, 'w') as f:
   f.write(sub.__str__())
   f.write('\n# Command:\n#'+command)
 os.system('mv ' + submit_file_filename + ' ' + job_dir)
-os.system('cp condor_execute_hexcms.sh ' + job_dir)
+os.system('cp ' + executable + ' ' + job_dir)
 
 # get the schedd
 coll = htcondor.Collector()
@@ -312,6 +327,7 @@ schedd = htcondor.Schedd(schedd_ad)
 # submit the job
 if args.test:
   print "Just a test, Exiting."
+  os.system('rm -rf ' + job_dir)
   sys.exit()
 print "Submitting Jobs ..."
 with schedd.transaction() as txn:
