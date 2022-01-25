@@ -26,9 +26,10 @@ def use_template_to_replace(template_filename, replaced_filename, to_replace):
     temp.write(replaced)
 
 # constants
+executable = 'condor_execute.sh'
 src_setup_script = 'cmssw_src_setup.sh'
 submit_file_filename = 'submit_file.jdl'
-input_file_filename_base = 'infiles' # also assumed in execute file
+input_file_filename_base = 'infiles' # also assumed in executable
 finalfile_filename = 'NANOAOD_TwoProng.root'
 unpacker_filename = 'unpacker.py'
 stageout_filename = 'stageout.py'
@@ -184,7 +185,7 @@ if site == "cmslpc" and args.output_cmslpc:
 print ""
 
 # make job directory
-job_dir = args.dir
+job_dir = 'Job_' + args.dir
 if os.path.isdir("./"+job_dir) and not args.force:
   raise Exception("Directory " + job_dir + " already exists. Use option -f to overwrite")
 if os.path.isdir("./"+job_dir) and args.force:
@@ -209,14 +210,14 @@ for count,set_of_lines in enumerate(grouper(input_files, N, '')):
       if line == '': continue
       fi.write(line+'\n')
     input_filenames.append(os.path.basename(fi.name))
-  # cmssw_ version of file keeps only filename instead of full path
+  # cmssw_ version of file keeps only filename instead of full path and adds 'file:'
   with open('cmssw_'+input_file_filename_base+'_'+str(count)+'.dat', 'w') as fi:
     for line in set_of_lines:
       if line == '': continue
       if not args.useLFN:
         i = line.rfind('/')
         line = line[i+1:len(line)]
-        fi.write(line+'\n')
+        fi.write('file:'+line+'\n')
       if args.useLFN:
         fi.write(line+'\n')
 for filename in input_filenames:
@@ -267,7 +268,7 @@ if not args.rebuild and not os.path.isdir('scratch'):
 
 # define submit files
 sub = htcondor.Submit()
-sub['executable'] = 'condor_execute_hexcms.sh'
+sub['executable'] = executable
 sub['arguments'] = unpacker_filename + " " + stageout_filename + " $(Process)"
 sub['should_transfer_files'] = 'YES'
 sub['+JobFlavor'] = 'longlunch'
