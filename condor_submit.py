@@ -289,8 +289,12 @@ sub['error'] = job_dir+'/$(Cluster)_$(Process)_out.txt'
 sub['log'] = job_dir+'/$(Cluster)_log.txt'
 
 # move copy of submit file and executable to job diretory 
+command = ''
+for a in sys.argv:
+  command += a + ' '
 with open(submit_file_filename, 'w') as f:
   f.write(sub.__str__())
+  f.write('\n# Command:\n#'+command)
 os.system('mv ' + submit_file_filename + ' ' + job_dir)
 os.system('cp condor_execute_hexcms.sh ' + job_dir)
 
