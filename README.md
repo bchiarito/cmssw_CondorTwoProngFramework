@@ -1,4 +1,4 @@
-python wrapper script to submit condor jobs on the site where the script is run
+python wrapper to submit condor jobs on the site where the script is run
 runs on MiniAOD to produce Custom NanoAOD. NanoAOD which includes TwoProng objects
 
 Works on the following sites
