@@ -41,26 +41,26 @@ parser = argparse.ArgumentParser(description="")
 
 # input/output
 parser.add_argument("input", 
-help="directory containing MiniAOD files, or a single MiniAOD file, \
-or .txt file with file locations (/store/user/... or /abs/path/to/file.root) one per line, \
-or dataset name (/*/*/MINIAOD(SIM)). the --input_* options can be used to overwrite \
-automatic assumptions about input location.")
+help="The input miniAOD. Can be: local directory, local single file, \
+text file with one file per line (must end in .txt), or dataset name (/*/*/MINIAOD(SIM)). \
+The --input_* options can be used to override automatic selection of input location \
+in case the automatic selection fails.")
 input_options = parser.add_mutually_exclusive_group()
 input_options.add_argument("--input_local", action="store_true",
 help="indicate that input is on the local filesystem")
 input_options.add_argument("--input_cmslpc", action="store_true",
 help="indicate that input is an eos area on cmslpc")
 input_options.add_argument("--input_dataset", action="store_true",
-help="indicate that input is official dataset")
+help="indicate that input is an official dataset")
 parser.add_argument("output", 
-help="local directory or eos storage (/store/user/...) to write output to, \
-the --output_* options can be used to overwite automatic assumptons \
-about output location.")
+help="The output location of the condor jobs. Can be: local directory, \
+or cmslpc eos storage (/store/user/...). The --output_* options can be used to overwite \
+automatic selection of output location in case the automatic selection fails.")
 output_options = parser.add_mutually_exclusive_group()
 output_options.add_argument("--output_local", action="store_true",
-help="indicate that output should be written to local filesystem")
+help="indicate that output is written to local filesystem")
 output_options.add_argument("--output_cmslpc", action="store_true",
-help="indicate that output should be written to an eos area on cmslpc")
+help="indicate that output is written to an eos area on cmslpc")
 
 # job structure
 parser.add_argument("-n", "--num", default=1, type=int,
@@ -70,11 +70,11 @@ help="name of job directory, created in current directory")
 parser.add_argument("-f", "--force", action="store_true",
 help="overwrite job directory if it already exists")
 parser.add_argument("-b", "--rebuild", default=False, action="store_true",
-help="remake scratch directory and src/ area needed to ship with job")
+help="remake scratch area needed to ship with job")
 parser.add_argument("-t", "--test", default=False, action="store_true",
 help="don't submit condor job but do all other steps")
 parser.add_argument("--useLFN", default=False, action="store_true",
-help="use only with official dataset, do not xrdcp and instead supply LFN directly to cmssw config")
+help="use with official dataset: do not use xrdcp, instead supply LFN to cmssw config")
 
 # convenience
 parser.add_argument("-s", "--short", default=False, action="store_true",
