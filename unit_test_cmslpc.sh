@@ -6,6 +6,8 @@ UnitTest()
   python condor_submit.py one_cmslpc_file.txt . -d unit_test_cmslpc -t -f
   echo ""
   python condor_submit.py one_cmslpc_file.txt /store/user/bchiari1/unit_tests/ -d unit_test_cmslpc -t -f
+  echo ""
+  python condor_submit.py dy_one_file.txt . -d unit_test_cmslpc --input_dataset -t -f
 }
 Rebuild()
 {
