@@ -83,15 +83,15 @@ parser.add_argument("--nocleanup", default=False, action="store_true",
 help="do not cleanup job directory after job starts running")
 
 # not used yet
-parser.add_argument("-y", "--year", default="UL18",
-help="prescription to follow, e.g., UL18, UL17, UL16")
-mc_options = parser.add_mutually_exclusive_group()
-mc_options.add_argument("--mc", action="store_true",
-help="running on mc")
-mc_options.add_argument("--data", action="store_true",
-help="running on data")
-parser.add_argument("-v", "--verbose", action="store_true",
-help="ask for verbose output")
+#parser.add_argument("-y", "--year", default="UL18",
+#help="prescription to follow, e.g., UL18, UL17, UL16")
+#mc_options = parser.add_mutually_exclusive_group()
+#mc_options.add_argument("--mc", action="store_true",
+#help="running on mc")
+#mc_options.add_argument("--data", action="store_true",
+#help="running on data")
+#parser.add_argument("-v", "--verbose", action="store_true",
+#help="ask for verbose output")
 
 # end command line options
 args = parser.parse_args()
