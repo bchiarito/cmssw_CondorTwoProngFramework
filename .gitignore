@@ -1,3 +1,4 @@
 my_condor_job/
 scratch/
 *.txt
+*.pyc

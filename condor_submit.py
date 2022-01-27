@@ -9,6 +9,7 @@ import math
 import re
 import time
 import socket
+import dataset_management as dm
 from itertools import izip_longest
 
 # subroutines
@@ -35,6 +36,7 @@ unpacker_filename = 'unpacker.py'
 stageout_filename = 'stageout.py'
 unpacker_template_filename = 'template_unpacker.py'
 stageout_template_filename = 'template_stageout.py'
+dataset_cache = 'saved_datasets'
 
 # command line options
 parser = argparse.ArgumentParser(description="")
@@ -105,6 +107,8 @@ else: raise Exception('Unrecognized site: not hexcms, cmslpc, or lxplus')
 
 # check input
 input_not_set = False
+if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
+   re.match("(?:" + "/.*/.*/MINIAODSIM" + r")\Z", args.input): args.input_dataset = True
 if args.input_local == False and args.input_cmslpc == False and args.input_dataset == False:
   input_not_set = True
 if input_not_set and site == "hexcms": args.input_local = True
@@ -122,7 +126,7 @@ if s[len(s)-4:len(s)] == ".txt":
       print "  input file: ", line.strip()
   txt_file = True
 # input is directory on hexcms, and running on hexcms
-if not txt_file and args.input_local and site == "hexcms":
+elif not txt_file and args.input_local and site == "hexcms":
   if os.path.isfile(args.input):
     print "  found local file: ", args.input
     input_files.append(args.input)
@@ -138,10 +142,10 @@ if not txt_file and args.input_local and site == "hexcms":
         print "  found local file: ", line
     print ""
 # input is directory on hexcms, and running on cmslpc
-if not txt_file and args.input_local and site == "cmslpc":
+elif not txt_file and args.input_local and site == "cmslpc":
   raise Exception("Not supported running on cmslpc with input data on hexcms.")
 # input is eos area on cmslc
-if not txt_file and args.input_cmslpc:
+elif not txt_file and args.input_cmslpc:
   if s[len(s)-5:len(s)] == ".root":
     print "  found eos file: ", args.input
     input_files.append(args.input)
@@ -152,23 +156,26 @@ if not txt_file and args.input_cmslpc:
       input_files.append(line)
       print "  found eos file: ", line
 # input is dataset name
-if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
-   re.match("(?:" + "/.*/.*/MINIAODSIM" + r")\Z", args.input):
-  args.input_dataset = True
-  # check if txt file exists, if not generate it
-  # use txt file to fill input_files, just line by line
-  raise Exception('Intput dataset name directorly not implemented!')
+elif args.input_dataset:
+  dataset_name = args.input
+  if not dm.isCached(dataset_name, dataset_cache): dm.process(dataset_name, dataset_cache)
+  input_files = dm.getFiles(dataset_name, dataset_cache)
+  print "  example dataset file: ", input_files[0].strip()
+else:
+  raise Exception('Checking input failed! Could not determine input type.')
 
 # test input
 if args.input_cmslpc:
   ret = os.system('eos root://cmseos.fnal.gov ls ' + input_files[0] + ' > /dev/null')
   if not ret == 0:
-    raise Exception('Input is not a valid file on cmslpc eos area!')
-if args.input_local:
+    raise Exception('Input is not a valid file on cmslpc eos area! Did you mean to use --input_dataset?')
+elif args.input_local:
   if not os.path.isfile(args.input) and not os.path.isdir(args.input):
     raise Exception('Input is not a valid directory or file on hexcms!')
-if args.input_dataset:
+elif args.input_dataset:
   if False: raise Exception()
+else:
+  raise Exception('Testing input failed! Could not determine input type.') 
 
 # check output
 output_not_set = False
