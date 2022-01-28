@@ -29,7 +29,7 @@ def process(dataset, dirname):
   with open(dirname+'/'+d+'/'+master_filename, 'w') as f:
     f.write(files)
   
-def getFiles(dataset, dirname):
+def getFiles(dataset, dirname, maxFiles):
   if not isCached(dataset, dirname):
     raise Exception('Dataset Management: Trying to get files but dataset is not cached!')
   d = convertToDir(dataset)
@@ -37,4 +37,5 @@ def getFiles(dataset, dirname):
   with open(dirname+'/'+d+'/'+master_filename, 'r') as f:
     for line in f:
       files.append(line)
+      if len(files) == maxFiles: break
   return files

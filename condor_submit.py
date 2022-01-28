@@ -10,6 +10,7 @@ import re
 import time
 import socket
 import dataset_management as dm
+from datetime import date
 from itertools import izip_longest
 
 # subroutines
@@ -65,24 +66,26 @@ output_options.add_argument("--output_cmslpc", action="store_true",
 help="indicate that output is written to an eos area on cmslpc")
 
 # job structure
+parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
+help="name of job directory, created in current directory")
 parser.add_argument("-n", "--num", default=1, type=int,
 help="number of subjobs in the job (default is 1)")
-parser.add_argument("-d", "--dir", default="my_condor_job",
-help="name of job directory, created in current directory")
+parser.add_argument("-m", "--maxFiles", default=-1, type=int,
+help="max number of files to include from input area (default is -1, meaning all files)")
+parser.add_argument("--useLFN", default=False, action="store_true",
+help="use with official dataset: do not use xrdcp, instead supply LFN to cmssw config")
+
+# convenience
+parser.add_argument("-w", "--wait", default=False, action="store_true",
+help="wait for the job using condor_wait after submitting")
+parser.add_argument("--nocleanup", default=False, action="store_true",
+help="do not cleanup job directory after job starts running")
 parser.add_argument("-f", "--force", action="store_true",
 help="overwrite job directory if it already exists")
 parser.add_argument("-b", "--rebuild", default=False, action="store_true",
 help="remake scratch area needed to ship with job")
 parser.add_argument("-t", "--test", default=False, action="store_true",
 help="don't submit condor job but do all other steps")
-parser.add_argument("--useLFN", default=False, action="store_true",
-help="use with official dataset: do not use xrdcp, instead supply LFN to cmssw config")
-
-# convenience
-parser.add_argument("-s", "--short", default=False, action="store_true",
-help="for a short job, wait for it using condor_wait")
-parser.add_argument("--nocleanup", default=False, action="store_true",
-help="do not cleanup job directory after job starts running")
 
 # not used yet
 #parser.add_argument("-y", "--year", default="UL18",
@@ -113,24 +116,24 @@ if args.input_local == False and args.input_cmslpc == False and args.input_datas
   input_not_set = True
 if input_not_set and site == "hexcms": args.input_local = True
 if input_not_set and site == "cmslpc": args.input_cmslpc = True
-print "Checking Input ..."
+#print "Checking Input ..."
 input_files = [] # each entry a file location
 s = args.input
 txt_file = False
 # input is .txt file
 if s[len(s)-4:len(s)] == ".txt":
-  print "Found input .txt file with file locations"
   with open(args.input) as f:
     for line in f:
       input_files.append(line.strip())
-      print "  input file: ", line.strip()
+      #print "  input file: ", line.strip()
+      if len(input_files) == args.maxFiles: break
   txt_file = True
 # input is directory on hexcms, and running on hexcms
 elif not txt_file and args.input_local and site == "hexcms":
   if os.path.isfile(args.input):
-    print "  found local file: ", args.input
+    #print "  found local file: ", args.input
     input_files.append(args.input)
-    print ""
+    #print ""
   if os.path.isdir(args.input):
     if args.input[len(args.input)-1] == '/': args.input = args.input[0:len(args.input)-1]
     cmd = 'ls -1 {}/*'.format(args.input)
@@ -139,7 +142,8 @@ elif not txt_file and args.input_local and site == "hexcms":
     for line in output:
       if not line.find(".root") == -1:
         input_files.append(line)
-        print "  found local file: ", line
+        #print "  found local file: ", line
+        if len(input_files) == args.maxFiles: break
     print ""
 # input is directory on hexcms, and running on cmslpc
 elif not txt_file and args.input_local and site == "cmslpc":
@@ -147,22 +151,25 @@ elif not txt_file and args.input_local and site == "cmslpc":
 # input is eos area on cmslc
 elif not txt_file and args.input_cmslpc:
   if s[len(s)-5:len(s)] == ".root":
-    print "  found eos file: ", args.input
+    #print "  found eos file: ", args.input
     input_files.append(args.input)
   else:
     list_of_files = subprocess.check_output("xrdfs root://cmseos.fnal.gov ls -u " + args.input, shell=True)
     list_of_files = list_of_files.split('\n')
     for line in list_of_files:
       input_files.append(line)
-      print "  found eos file: ", line
+      #print "  found eos file: ", line
+      if len(input_files) == args.maxFiles: break
 # input is dataset name
 elif args.input_dataset:
   dataset_name = args.input
   if not dm.isCached(dataset_name, dataset_cache): dm.process(dataset_name, dataset_cache)
-  input_files = dm.getFiles(dataset_name, dataset_cache)
-  print "  example dataset file: ", input_files[0].strip()
+  input_files = dm.getFiles(dataset_name, dataset_cache, args.maxFiles)
+  #print "  example dataset file: ", input_files[0].strip()
 else:
   raise Exception('Checking input failed! Could not determine input type.')
+print "Processed", len(input_files), "files"
+print "  example file: ", input_files[0].strip()
 
 # test input
 if args.input_cmslpc:
@@ -187,14 +194,21 @@ if output_not_set and site == "hexcms": args.output_local = True
 if output_not_set and site == "cmslpc": args.output_cmslpc = True
 if args.output_local:
   if not os.path.isdir(args.output):
-    print "\nMaking output directory, because it does not already exist..."
+    print "\nMaking output directory, because it does not already exist ..."
     ret = os.system('mkdir -p ' + args.output)
     if not ret == 0: raise Exception('Failed to create job output directory!')
 if site == "cmslpc" and args.output_cmslpc:
-  print "\nEnsuring output eos location exists..."
+  print "Ensuring output eos location exists ..."
   ret = os.system("eos root://cmseos.fnal.gov mkdir -p " + args.output)
   if not ret == 0: raise Exception('Failed to create job output directory!')
-print ""
+
+# test output
+if args.output_cmslpc:
+  os.system('touch blank.txt')
+  ret = os.system('xrdcp --nopbar blank.txt root://cmseos.fnal.gov/' + args.output)
+  if not ret == 0: raise Exception('Failed to xrdcp test file into output eos area!')
+  ret = os.system("eos root://cmseos.fnal.gov rm " + args.output + "/blank.txt &> /dev/null")
+  if not ret == 0: raise Exception('Failed eosrm test file from output eos area!')
 
 # print input/output assumptions
 if args.output_local: o = 'local'
@@ -202,9 +216,11 @@ if args.output_cmslpc: o = 'cmslpc eos'
 if args.input_local: i = 'local'
 if args.input_cmslpc: i = 'cmslpc eos'
 if args.input_dataset: i = 'official dataset'
-print "Job Locations"
-print "Input : " + i
-print "Output: " + o + "\n"
+print ""
+print "Summary"
+print "-------"
+print "Input        : " + i
+print "Output       : " + o
 
 # make job directory
 job_dir = 'Job_' + args.dir
@@ -213,10 +229,9 @@ if os.path.isdir("./"+job_dir) and not args.force:
 if os.path.isdir("./"+job_dir) and args.force:
   #subprocess.call(['rm', '-rf', "./"+job_dir])
   os.system('rm -rf ./' + job_dir)
-print "Job Directory :", job_dir
+print "Job Directory:", job_dir
 #subprocess.call(['mkdir', job_dir])
 os.system('mkdir ' + job_dir)
-print ""
 
 # splitting
 num_total_files = len(input_files)
@@ -323,12 +338,12 @@ os.system('cp ' + executable + ' ' + job_dir)
 # get the schedd
 coll = htcondor.Collector()
 sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
-print "Found These Schedds:"
-for s in sched_query:
-  print "  ", s["Name"]
+#print "Found These Schedds:"
+#for s in sched_query:
+#  print "  ", s["Name"]
 if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
 if site == 'cmslpc': schedd_ad = sched_query[0]
-print "Picked:", schedd_ad["Name"] + "\n"
+print "Schedd       :", schedd_ad["Name"] + "\n"
 schedd = htcondor.Schedd(schedd_ad)
 
 # submit the job
