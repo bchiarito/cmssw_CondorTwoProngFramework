@@ -209,6 +209,7 @@ if args.output_cmslpc:
   if not ret == 0: raise Exception('Failed to xrdcp test file into output eos area!')
   ret = os.system("eos root://cmseos.fnal.gov rm " + args.output + "/blank.txt &> /dev/null")
   if not ret == 0: raise Exception('Failed eosrm test file from output eos area!')
+  os.system('rm blank.txt')
 
 # print input/output assumptions
 if args.output_local: o = 'local'
