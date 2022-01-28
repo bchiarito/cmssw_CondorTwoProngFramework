@@ -358,7 +358,7 @@ with schedd.transaction() as txn:
   print "ClusterId: ", cluster_id
 
 # condor_wait for the job
-if args.short:
+if args.wait:
   print "Waiting on job with condor_wait ...\n"
   time.sleep(1)
   os.system('condor_wait -echo ' + job_dir + '/' + str(cluster_id) + '_log.txt')
