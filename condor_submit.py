@@ -44,7 +44,7 @@ parser = argparse.ArgumentParser(description="")
 
 # input/output
 parser.add_argument("input", 
-help="The input miniAOD. Can be: local directory, local single file, \
+help="The input miniAOD. Can be: absolute path to local directory/file, \
 text file with one file per line (must end in .txt), or dataset name (/*/*/MINIAOD(SIM)). \
 The --input_* options can be used to override automatic selection of input location \
 in case the automatic selection fails.")
@@ -56,7 +56,7 @@ help="indicate that input is an eos area on cmslpc")
 input_options.add_argument("--input_dataset", action="store_true",
 help="indicate that input is an official dataset")
 parser.add_argument("output", 
-help="The output location of the condor jobs. Can be: local directory, \
+help="The output location of the condor jobs. Can be: absoulte path to local directory, \
 or cmslpc eos storage (/store/user/...). The --output_* options can be used to overwite \
 automatic selection of output location in case the automatic selection fails.")
 output_options = parser.add_mutually_exclusive_group()
@@ -185,8 +185,10 @@ else:
   raise Exception('Testing input failed! Could not determine input type.') 
 
 # check output
+if args.output[0] == '.':
+  raise Exception('Must use absolute path for output location!')
 output_not_set = False
-if not args.output[0] == '/':
+if not args.output[0:7] == '/store/':
   args.output_local = True
 elif args.output_local == False and args.output_cmslpc == False:
   output_not_set = True
