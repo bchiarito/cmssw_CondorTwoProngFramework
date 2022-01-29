@@ -38,6 +38,7 @@ stageout_filename = 'stageout.py'
 unpacker_template_filename = 'template_unpacker.py'
 stageout_template_filename = 'template_stageout.py'
 dataset_cache = 'saved_datasets'
+cmssw_prebuild_area = 'prebuild'
 
 # command line options
 parser = argparse.ArgumentParser(description="")
@@ -83,7 +84,7 @@ help="do not cleanup job directory after job starts running")
 parser.add_argument("-f", "--force", action="store_true",
 help="overwrite job directory if it already exists")
 parser.add_argument("-b", "--rebuild", default=False, action="store_true",
-help="remake scratch area needed to ship with job")
+help="remake cmssw prebuild area needed to ship with job")
 parser.add_argument("-t", "--test", default=False, action="store_true",
 help="don't submit condor job but do all other steps")
 
@@ -300,10 +301,10 @@ os.system('mv ' + replaced_filename + ' ' + job_dir)
 
 # prepare src/ setup area to send with job, if not already built
 if args.rebuild:
-  print "Setting up src directory (inside ./scratch/) to ship with job"
+  print "Setting up src directory (inside ./"+cmssw_prebuild_area+") to ship with job"
   os.system('./' + src_setup_script)
-  print "\nFinished setting up scratch directory to ship with job.\n"
-if not args.rebuild and not os.path.isdir('scratch'):
+  print "\nFinished setting up directory to ship with job.\n"
+if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
   raise Exception("Scratch area not prepared, use option --rebuild to create")
 
 # define submit files
@@ -320,8 +321,8 @@ sub['transfer_input_files'] = \
   job_dir+'/'+stageout_filename + ", " + \
   job_dir+'/'+input_file_filename_base+'_$(Process).dat' + ", " + \
   job_dir+'/'+'cmssw_'+input_file_filename_base+'_$(Process).dat' + ", " + \
-  'scratch/CMSSW_10_6_20/src/PhysicsTools' + ", " + \
-  'scratch/CMSSW_10_6_20/src/CommonTools'
+  cmssw_prebuild_area+'/CMSSW_10_6_20/src/PhysicsTools' + ", " + \
+  cmssw_prebuild_area+'/CMSSW_10_6_20/src/CommonTools'
 sub['transfer_output_files'] = '""'
 sub['initialdir'] = ''
 sub['output'] = job_dir+'/$(Cluster)_$(Process)_out.txt'
