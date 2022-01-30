@@ -355,6 +355,8 @@ if args.test:
   print "Just a test, Exiting."
   os.system('rm -rf ' + job_dir)
   sys.exit()
+if args.useLFN:
+  os.system('voms-proxy-init --valid 192:00 -voms cms')
 print "Submitting Jobs ..."
 with schedd.transaction() as txn:
   cluster_id = sub.queue(txn, count=TOTAL_JOBS)
