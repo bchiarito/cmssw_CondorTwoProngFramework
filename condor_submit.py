@@ -120,7 +120,6 @@ if input_not_set and site == "cmslpc": args.input_cmslpc = True
 #print "Checking Input ..."
 input_files = [] # each entry a file location
 s = args.input
-txt_file = False
 # input is .txt file
 if s[len(s)-4:len(s)] == ".txt":
   with open(args.input) as f:
@@ -128,9 +127,8 @@ if s[len(s)-4:len(s)] == ".txt":
       input_files.append(line.strip())
       #print "  input file: ", line.strip()
       if len(input_files) == args.maxFiles: break
-  txt_file = True
-# input is directory on hexcms, and running on hexcms
-elif not txt_file and args.input_local and site == "hexcms":
+# input is local
+elif args.input_local:
   if os.path.isfile(args.input):
     #print "  found local file: ", args.input
     input_files.append(args.input)
@@ -146,11 +144,8 @@ elif not txt_file and args.input_local and site == "hexcms":
         #print "  found local file: ", line
         if len(input_files) == args.maxFiles: break
     print ""
-# input is directory on hexcms, and running on cmslpc
-elif not txt_file and args.input_local and site == "cmslpc":
-  raise Exception("Not supported running on cmslpc with input data on hexcms.")
 # input is eos area on cmslc
-elif not txt_file and args.input_cmslpc:
+elif args.input_cmslpc:
   if s[len(s)-5:len(s)] == ".root":
     #print "  found eos file: ", args.input
     input_files.append(args.input)
