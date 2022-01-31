@@ -1,6 +1,4 @@
 import argparse
-import classad
-import htcondor
 import sys
 import subprocess
 import os
@@ -11,6 +9,34 @@ import time
 import socket
 import dataset_management as dm
 from itertools import izip_longest
+
+# get site
+hostname = socket.gethostname()
+if 'hexcms' in hostname: site = 'hexcms'
+elif 'fnal.gov' in hostname: site = 'cmslpc'
+elif 'cern.ch' in hostname: site = 'lxplus'
+else: raise Exception('Unrecognized site: not hexcms, cmslpc, or lxplus')
+
+# import condor modules
+try:
+  import classad
+  import htcondor
+except ImportError:
+  if site == 'hexcms':
+    raise Exception('On hexcms, please source this file before running: '+fix_condor_hexcms_script)
+
+# constants
+executable = 'condor_execute.sh'
+src_setup_script = 'cmssw_src_setup.sh'
+submit_file_filename = 'submit_file.jdl'
+input_file_filename_base = 'infiles' # also assumed in executable
+finalfile_filename = 'NANOAOD_TwoProng.root'
+unpacker_filename = 'unpacker.py'
+stageout_filename = 'stageout.py'
+unpacker_template_filename = 'template_unpacker.py'
+stageout_template_filename = 'template_stageout.py'
+dataset_cache = 'saved_datasets'
+fix_condor_hexcms_script = 'hexcms_fix_python.sh'
 
 # subroutines
 def grouper(iterable, n, fillvalue=None):
@@ -25,18 +51,6 @@ def use_template_to_replace(template_filename, replaced_filename, to_replace):
     replaced = replaced.replace(key, to_replace[key])
   with open(replaced_filename, 'w') as temp:
     temp.write(replaced)
-
-# constants
-executable = 'condor_execute.sh'
-src_setup_script = 'cmssw_src_setup.sh'
-submit_file_filename = 'submit_file.jdl'
-input_file_filename_base = 'infiles' # also assumed in executable
-finalfile_filename = 'NANOAOD_TwoProng.root'
-unpacker_filename = 'unpacker.py'
-stageout_filename = 'stageout.py'
-unpacker_template_filename = 'template_unpacker.py'
-stageout_template_filename = 'template_stageout.py'
-dataset_cache = 'saved_datasets'
 
 # command line options
 parser = argparse.ArgumentParser(description="")
@@ -97,13 +111,6 @@ help="do not cleanup job directory after job starts running")
 
 # end command line options
 args = parser.parse_args()
-
-# get site
-hostname = socket.gethostname()
-if 'hexcms' in hostname: site = 'hexcms'
-elif 'fnal.gov' in hostname: site = 'cmslpc'
-elif 'cern.ch' in hostname: site = 'lxplus'
-else: raise Exception('Unrecognized site: not hexcms, cmslpc, or lxplus')
 
 # check input
 input_not_set = False
