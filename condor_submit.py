@@ -18,14 +18,6 @@ elif 'fnal.gov' in hostname: site = 'cmslpc'
 elif 'cern.ch' in hostname: site = 'lxplus'
 else: raise Exception('Unrecognized site: not hexcms, cmslpc, or lxplus')
 
-# import condor modules
-try:
-  import classad
-  import htcondor
-except ImportError:
-  if site == 'hexcms':
-    raise Exception('On hexcms, please source this file before running: '+fix_condor_hexcms_script)
-
 # constants
 executable = 'condor_execute.sh'
 src_setup_script = 'cmssw_src_setup.sh'
@@ -39,6 +31,15 @@ stageout_template_filename = 'template_stageout.py'
 dataset_cache = 'saved_datasets'
 fix_condor_hexcms_script = 'hexcms_fix_python.sh'
 cmssw_prebuild_area = 'prebuild'
+
+# import condor modules
+try:
+  import classad
+  import htcondor
+except ImportError:
+  if site == 'hexcms':
+    raise Exception('On hexcms, please source this file before running: ' + fix_condor_hexcms_script)
+
 
 # subroutines
 def grouper(iterable, n, fillvalue=None):
