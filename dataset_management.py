@@ -3,6 +3,7 @@ import hashlib
 import subprocess
 
 master_filename = 'index.txt'
+info_filename = 'info.txt'
 
 def convertToDir(dataset):
   return hashlib.md5(dataset).hexdigest()
@@ -28,8 +29,10 @@ def process(dataset, dirname):
   print "Dataset Management: DAS query Successful."
   with open(dirname+'/'+d+'/'+master_filename, 'w') as f:
     f.write(files)
+  with open(dirname+'/'+d+'/'+info_filename, 'w') as f:
+    f.write('Dataset: '+dataset)
   
-def getFiles(dataset, dirname):
+def getFiles(dataset, dirname, maxFiles):
   if not isCached(dataset, dirname):
     raise Exception('Dataset Management: Trying to get files but dataset is not cached!')
   d = convertToDir(dataset)
@@ -37,4 +40,5 @@ def getFiles(dataset, dirname):
   with open(dirname+'/'+d+'/'+master_filename, 'r') as f:
     for line in f:
       files.append(line)
+      if len(files) == maxFiles: break
   return files

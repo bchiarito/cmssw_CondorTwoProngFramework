@@ -2,9 +2,9 @@
 export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
 export SCRAM_ARCH=slc7_amd64_gcc700
 source $VO_CMS_SW_DIR/cmsset_default.sh
-rm -rf scratch
-mkdir scratch
-cd scratch
+rm -rf prebuild
+mkdir prebuild
+cd prebuild
 scramv1 project CMSSW CMSSW_10_6_20
 cd CMSSW_10_6_20/src
 eval `scramv1 runtime -sh`

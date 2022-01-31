@@ -1,4 +1,4 @@
-my_condor_job/
-scratch/
+Job_*/
+prebuild/
 *.txt
 *.pyc
