@@ -94,8 +94,6 @@ help="use with official dataset: do not use xrdcp, instead supply LFN to cmssw c
 # convenience
 parser.add_argument("-w", "--wait", default=False, action="store_true",
 help="wait for the job using condor_wait after submitting")
-parser.add_argument("--nocleanup", default=False, action="store_true",
-help="do not cleanup job directory after job starts running")
 parser.add_argument("-f", "--force", action="store_true",
 help="overwrite job directory if it already exists")
 parser.add_argument("-b", "--rebuild", default=False, action="store_true",
@@ -234,11 +232,11 @@ job_dir = 'Job_' + args.dir
 if os.path.isdir("./"+job_dir) and not args.force:
   raise Exception("Directory " + job_dir + " already exists. Use option -f to overwrite")
 if os.path.isdir("./"+job_dir) and args.force:
-  #subprocess.call(['rm', '-rf', "./"+job_dir])
   os.system('rm -rf ./' + job_dir)
 print "Job Directory:", job_dir
-#subprocess.call(['mkdir', job_dir])
 os.system('mkdir ' + job_dir)
+os.system('mkdir ' + job_dir + '/infiles')
+os.system('mkdir ' + job_dir + '/stdout')
 
 # splitting
 num_total_files = len(input_files)
@@ -265,8 +263,8 @@ for count,set_of_lines in enumerate(grouper(input_files, N, '')):
       if args.useLFN:
         fi.write(line+'\n')
 for filename in input_filenames:
-  os.system('mv ' + filename + ' ' + job_dir)
-  os.system('mv cmssw_' + filename + ' ' + job_dir)
+  os.system('mv ' + filename + ' ' + job_dir + '/infiles/')
+  os.system('mv cmssw_' + filename + ' ' + job_dir + '/infiles/')
 TOTAL_JOBS = len(input_filenames)
 
 # prepare unpacker script
@@ -322,14 +320,14 @@ if site == 'hexcms': sub['x509userproxy'] = ''
 sub['transfer_input_files'] = \
   job_dir+'/'+unpacker_filename + ", " + \
   job_dir+'/'+stageout_filename + ", " + \
-  job_dir+'/'+input_file_filename_base+'_$(Process).dat' + ", " + \
-  job_dir+'/'+'cmssw_'+input_file_filename_base+'_$(Process).dat' + ", " + \
+  job_dir+'/infiles/'+input_file_filename_base+'_$(Process).dat' + ", " + \
+  job_dir+'/infiles/'+'cmssw_'+input_file_filename_base+'_$(Process).dat' + ", " + \
   cmssw_prebuild_area+'/CMSSW_10_6_20/src/PhysicsTools' + ", " + \
   cmssw_prebuild_area+'/CMSSW_10_6_20/src/CommonTools'
 sub['transfer_output_files'] = '""'
 sub['initialdir'] = ''
-sub['output'] = job_dir+'/$(Cluster)_$(Process)_out.txt'
-sub['error'] = job_dir+'/$(Cluster)_$(Process)_out.txt'
+sub['output'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
+sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['log'] = job_dir+'/$(Cluster)_log.txt'
 
 # move copy of submit file and executable to job diretory 
@@ -370,10 +368,3 @@ if args.wait:
   print "Waiting on job with condor_wait ...\n"
   time.sleep(1)
   os.system('condor_wait -echo ' + job_dir + '/' + str(cluster_id) + '_log.txt')
-
-# cleanup job directory
-if not args.nocleanup:
-  time.sleep(60)
-  for filename in input_filenames:
-    os.system('rm ' + job_dir + '/' + filename)
-    os.system('rm ' + job_dir + '/cmssw_' + filename)
