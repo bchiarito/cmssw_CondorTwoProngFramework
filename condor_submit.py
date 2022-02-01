@@ -331,7 +331,7 @@ sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['log'] = job_dir+'/$(Cluster)_log.txt'
 
 # move copy of submit file and executable to job diretory 
-command = ''
+command = 'python '
 for a in sys.argv:
   command += a + ' '
 with open(submit_file_filename, 'w') as f:
@@ -356,7 +356,7 @@ if args.test:
   print "Just a test, Exiting."
   os.system('rm -rf ' + job_dir)
   sys.exit()
-if args.useLFN:
+if site == 'cmslpc':
   os.system('voms-proxy-init --valid 192:00 -voms cms')
 print "Submitting Jobs ..."
 with schedd.transaction() as txn:
