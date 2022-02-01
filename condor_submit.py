@@ -11,6 +11,11 @@ import dataset_management as dm
 from datetime import date
 from itertools import izip_longest
 
+# usage notes
+'''
+on UL18 mc, mini>nano, 100k events per subjob is good, 150k is probably the limit before hitting 2 day job time limit
+'''
+
 # get site
 hostname = socket.gethostname()
 if 'hexcms' in hostname: site = 'hexcms'
@@ -39,7 +44,6 @@ try:
 except ImportError:
   if site == 'hexcms':
     raise Exception('On hexcms, please source this file before running: ' + fix_condor_hexcms_script)
-
 
 # subroutines
 def grouper(iterable, n, fillvalue=None):
@@ -156,7 +160,7 @@ elif args.input_cmslpc:
     #print "  found eos file: ", args.input
     input_files.append(args.input)
   else:
-    list_of_files = subprocess.check_output("xrdfs root://cmseos.fnal.gov ls -u " + args.input, shell=True)
+    list_of_files = subprocess.check_output("xrdfs root://cmseos.fnal.gov ls " + args.input, shell=True)
     list_of_files = list_of_files.split('\n')
     for line in list_of_files:
       input_files.append(line)
@@ -197,6 +201,7 @@ elif args.output_local == False and args.output_cmslpc == False:
 if output_not_set and site == "hexcms": args.output_local = True
 if output_not_set and site == "cmslpc": args.output_cmslpc = True
 if args.output_local:
+  if site == "cmslpc": raise Exception('Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
   if not os.path.isdir(args.output):
     print "\nMaking output directory, because it does not already exist ..."
     ret = os.system('mkdir -p ' + args.output)
@@ -250,7 +255,7 @@ for count,set_of_lines in enumerate(grouper(input_files, N, '')):
   with open(input_file_filename_base+'_'+str(count)+'.dat', 'w') as fi:
     for line in set_of_lines:
       if line == '': continue
-      fi.write(line+'\n')
+      fi.write(line.strip()+'\n')
     input_filenames.append(os.path.basename(fi.name))
   # cmssw_ version of file keeps only filename instead of full path and adds 'file:'
   with open('cmssw_'+input_file_filename_base+'_'+str(count)+'.dat', 'w') as fi:
@@ -259,7 +264,7 @@ for count,set_of_lines in enumerate(grouper(input_files, N, '')):
       if not args.useLFN:
         i = line.rfind('/')
         line = line[i+1:len(line)]
-        fi.write('file:'+line+'\n')
+        fi.write('file:'+line.strip()+'\n')
       if args.useLFN:
         fi.write(line+'\n')
 for filename in input_filenames:
@@ -328,7 +333,7 @@ sub['transfer_output_files'] = '""'
 sub['initialdir'] = ''
 sub['output'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
-sub['log'] = job_dir+'/$(Cluster)_log.txt'
+sub['log'] = job_dir+'/log_$(Cluster).txt'
 
 # move copy of submit file and executable to job diretory 
 command = 'python '
@@ -343,9 +348,6 @@ os.system('cp ' + executable + ' ' + job_dir)
 # get the schedd
 coll = htcondor.Collector()
 sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
-#print "Found These Schedds:"
-#for s in sched_query:
-#  print "  ", s["Name"]
 if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
 if site == 'cmslpc': schedd_ad = sched_query[0]
 print "Schedd       :", schedd_ad["Name"] + "\n"
