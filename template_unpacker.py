@@ -9,6 +9,7 @@ RETRIES = 10
 
 with open(input_file_filename) as f:
   for line in f:
+    print "Unpacker: command:", copy_command + " " + redirector + line.strip() + " ."
     os.system(copy_command + " " + redirector + line.strip() + " .")
     # retry logic
     i = line.rfind('/')
@@ -20,5 +21,6 @@ with open(input_file_filename) as f:
         print "\nUnpacker: Reached Retry Limit! Will not try again!\n"
         break
       print "\nUnpacker: Copy failed, file not found! Will retry ...\n"
+      print "Unpacker: command:", copy_command + " " + redirector + line.strip() + " ."
       os.system(copy_command + " " + redirector + line.strip() + " .")
       counter += 1      
