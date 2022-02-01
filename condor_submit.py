@@ -220,25 +220,12 @@ if args.output_cmslpc:
   if not ret == 0: raise Exception('Failed eosrm test file from output eos area!')
   os.system('rm blank.txt')
 
-# print input/output assumptions
-if args.output_local: o = 'local'
-if args.output_cmslpc: o = 'cmslpc eos'
-if args.input_local: i = 'local'
-if args.input_cmslpc: i = 'cmslpc eos'
-if args.input_dataset: i = 'official dataset'
-print ""
-print "Summary"
-print "-------"
-print "Input        : " + i
-print "Output       : " + o
-
 # make job directory
 job_dir = 'Job_' + args.dir
 if os.path.isdir("./"+job_dir) and not args.force:
   raise Exception("Directory " + job_dir + " already exists. Use option -f to overwrite")
 if os.path.isdir("./"+job_dir) and args.force:
   os.system('rm -rf ./' + job_dir)
-print "Job Directory:", job_dir
 os.system('mkdir ' + job_dir)
 os.system('mkdir ' + job_dir + '/infiles')
 os.system('mkdir ' + job_dir + '/stdout')
@@ -350,8 +337,24 @@ coll = htcondor.Collector()
 sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
 if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
 if site == 'cmslpc': schedd_ad = sched_query[0]
-print "Schedd       :", schedd_ad["Name"] + "\n"
 schedd = htcondor.Schedd(schedd_ad)
+
+# print summary
+if args.output_local: o_assume = 'local'
+if args.output_cmslpc: o_assume = 'cmslpc eos'
+if args.input_local: i_assume = 'local'
+if args.input_cmslpc: i_assume = 'cmslpc eos'
+if args.input_dataset: i_assume = 'official dataset'
+print ""
+print "Summary"
+print "-------"
+print "Job Directory    :", job_dir
+print "Total Jobs       :", str(TOTAL_JOBS)
+print "Approx files/job :", str(N)
+print "Input            : " + i_assume
+print "Output           : " + o_assume
+print "Schedd           :", schedd_ad["Name"]
+print ""
 
 # submit the job
 if args.test:
