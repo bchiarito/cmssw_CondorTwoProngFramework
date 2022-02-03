@@ -14,6 +14,8 @@ from itertools import izip_longest
 # usage notes
 '''
 on UL18 mc, mini>nano, 100k events per subjob is good, 150k is probably the limit before hitting 2 day job time limit
+
+size of nano: 2.8 GB/mil
 '''
 
 # get site
@@ -203,11 +205,11 @@ if output_not_set and site == "cmslpc": args.output_cmslpc = True
 if args.output_local:
   if site == "cmslpc": raise Exception('Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
   if not os.path.isdir(args.output):
-    print "\nMaking output directory, because it does not already exist ..."
+    #print "\nMaking output directory, because it does not already exist ..."
     ret = os.system('mkdir -p ' + args.output)
     if not ret == 0: raise Exception('Failed to create job output directory!')
 if site == "cmslpc" and args.output_cmslpc:
-  print "Ensuring output eos location exists ..."
+  #print "Ensuring output eos location exists ..."
   ret = os.system("eos root://cmseos.fnal.gov mkdir -p " + args.output)
   if not ret == 0: raise Exception('Failed to create job output directory!')
 

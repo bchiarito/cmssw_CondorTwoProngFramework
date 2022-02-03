@@ -5,7 +5,7 @@ import os
 input_file_filename = '__inputfilefilenamebase__' + '_' + sys.argv[1] + '.dat'
 copy_command = '__copycommand__'
 redirector = "__redirector__"
-RETRIES = 10
+RETRIES = 2
 
 with open(input_file_filename) as f:
   for line in f:
@@ -21,6 +21,6 @@ with open(input_file_filename) as f:
         print "\nUnpacker: Reached Retry Limit! Will not try again!\n"
         break
       print "\nUnpacker: Copy failed, file not found! Will retry ...\n"
-      print "Unpacker: command:", copy_command + " " + redirector + line.strip() + " ."
+      print "Unpacker: retry command:", copy_command + " " + redirector + line.strip() + " ."
       os.system(copy_command + " " + redirector + line.strip() + " .")
       counter += 1      
