@@ -13,9 +13,13 @@ from itertools import izip_longest
 
 # usage notes
 '''
-on UL18 mc, mini>nano, 100k events per subjob is good, 150k is probably the limit before hitting 2 day job time limit
+events per subjob
+mc: 100k events per subjob, 150k hits 2 day limit
+signal: 50k events per subjob, 10k finishes in 5-6 hours
 
-size of nano: 2.8 GB/mil
+size
+bkg mc nano: 2.8 GB/mil
+signal mc nano: 4 GB/mil
 '''
 
 # get site
@@ -33,8 +37,7 @@ input_file_filename_base = 'infiles' # also assumed in executable
 finalfile_filename = 'NANOAOD_TwoProng.root'
 unpacker_filename = 'unpacker.py'
 stageout_filename = 'stageout.py'
-unpacker_template_filename = 'template_unpacker.py'
-stageout_template_filename = 'template_stageout.py'
+jobinfo_filename = 'job_info.py'
 dataset_cache = 'saved_datasets'
 fix_condor_hexcms_script = 'hexcms_fix_python.sh'
 cmssw_prebuild_area = 'prebuild'
@@ -262,9 +265,9 @@ for filename in input_filenames:
 TOTAL_JOBS = len(input_filenames)
 
 # prepare unpacker script
-to_replace = {}
-template_filename = unpacker_template_filename
+template_filename = "template_"+unpacker_filename
 replaced_filename = unpacker_filename
+to_replace = {}
 to_replace['__inputfilefilenamebase__'] = input_file_filename_base
 if args.input_local and site == 'hexcms':
   to_replace['__redirector__'] = ''
@@ -280,6 +283,8 @@ use_template_to_replace(template_filename, replaced_filename, to_replace)
 os.system('mv ' + replaced_filename + ' ' + job_dir)
 
 # prepare stageout script
+template_filename = "template_"+stageout_filename
+replaced_filename = stageout_filename
 to_replace = {}
 to_replace['__finalfile__'] = finalfile_filename
 to_replace['__outputlocation__'] = args.output
@@ -289,12 +294,10 @@ if args.output_local:
 if args.output_cmslpc:
   to_replace['__redirector__'] = 'root://cmseos.fnal.gov/'
   to_replace['__copycommand__'] = 'xrdcp --nopbar'
-template_filename = stageout_template_filename
-replaced_filename = stageout_filename
 use_template_to_replace(template_filename, replaced_filename, to_replace)
 os.system('mv ' + replaced_filename + ' ' + job_dir)
 
-# prepare src/ setup area to send with job, if not already built
+# prepare prebuild area to send with job
 if args.rebuild:
   print "Setting up src directory (inside ./"+cmssw_prebuild_area+") to ship with job"
   os.system('./' + src_setup_script)
@@ -350,12 +353,12 @@ if args.input_dataset: i_assume = 'official dataset'
 print ""
 print "Summary"
 print "-------"
-print "Job Directory    :", job_dir
-print "Total Jobs       :", str(TOTAL_JOBS)
-print "Approx files/job :", str(N)
-print "Input            : " + i_assume
-print "Output           : " + o_assume
-print "Schedd           :", schedd_ad["Name"]
+print "Job Directory       :", job_dir
+print "Total Jobs          :", str(TOTAL_JOBS)
+print "Files/Job  (approx) :", str(N)
+print "Input               : " + i_assume
+print "Output              : " + o_assume
+print "Schedd              :", schedd_ad["Name"]
 print ""
 
 # submit the job
@@ -369,6 +372,17 @@ print "Submitting Jobs ..."
 with schedd.transaction() as txn:
   cluster_id = sub.queue(txn, count=TOTAL_JOBS)
   print "ClusterId: ", cluster_id
+
+# prepare job_info.py file
+template_filename = "template_"+jobinfo_filename
+replaced_filename = jobinfo_filename
+to_replace = {}
+to_replace['__cluster__'] = str(cluster_id)
+to_replace['__queue__'] = str(TOTAL_JOBS)
+to_replace['__schedd__'] = schedd_ad["Name"]
+to_replace['__output__'] = args.output
+use_template_to_replace(template_filename, replaced_filename, to_replace)
+os.system('mv ' + replaced_filename + ' ' + job_dir)
 
 # condor_wait for the job
 if args.wait:
