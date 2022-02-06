@@ -21,14 +21,16 @@ location = "cmslpc"
 sys.path.append(args.jobDir)
 import stageout as job
 if location is "cmslpc":
+  print "trying: ", "xrdcp -r "+job.redirector+job.output_location+" "+args.dest
   os.system("xrdcp -r "+job.redirector+job.output_location+" "+args.dest)
-  if not len(os.listdir(args.dest)) == 1: raise Exception("something went wrong.")
-  di = os.listdir(args.dest)[0]
-  d = args.dest+di
-  print d
-  print di
-  os.system("mv "+d+"/* "+args.dest)
-  os.system("rmdir "+d)
+  #if not len(os.listdir(args.dest)) == 1: raise Exception("something went wrong.")
+  if len(os.listdir(args.dest)) == 1: # fix if the copy was dir instead of files
+    di = os.listdir(args.dest)[0]
+    d = args.dest+'/'+di
+    print d
+    print di
+    os.system("mv "+d+"/* "+args.dest)
+    os.system("rmdir "+d)
 if location is "local":
   os.system("cp + "+job.output_location+"/* "+args.dest)
 
