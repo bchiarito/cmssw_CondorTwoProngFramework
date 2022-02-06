@@ -11,17 +11,6 @@ import dataset_management as dm
 from datetime import date
 from itertools import izip_longest
 
-# usage notes
-'''
-events per subjob
-mc: 100k events per subjob, 150k hits 2 day limit
-signal: 50k events per subjob, 10k finishes in 5-6 hours
-
-size
-bkg mc nano: 2.8 GB/mil
-signal mc nano: 4 GB/mil
-'''
-
 # get site
 hostname = socket.gethostname()
 if 'hexcms' in hostname: site = 'hexcms'
