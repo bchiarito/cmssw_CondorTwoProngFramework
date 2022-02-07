@@ -16,7 +16,7 @@ hostname = socket.gethostname()
 if 'hexcms' in hostname: site = 'hexcms'
 elif 'fnal.gov' in hostname: site = 'cmslpc'
 elif 'cern.ch' in hostname: site = 'lxplus'
-else: raise Exception('Unrecognized site: not hexcms, cmslpc, or lxplus')
+else: raise SystemExit('ERROR: Unrecognized site: not hexcms, cmslpc, or lxplus')
 
 # constants
 executable = 'condor_execute.sh'
@@ -37,7 +37,7 @@ try:
   import htcondor
 except ImportError:
   if site == 'hexcms':
-    raise Exception('On hexcms, please source this file before running: ' + fix_condor_hexcms_script)
+    raise SystemExit('ERROR: On hexcms, please source this file before running: ' + fix_condor_hexcms_script)
 
 # subroutines
 def grouper(iterable, n, fillvalue=None):
@@ -167,7 +167,7 @@ elif args.input_dataset:
   input_files = dm.getFiles(dataset_name, dataset_cache, args.maxFiles)
   #print "  example dataset file: ", input_files[0].strip()
 else:
-  raise Exception('Checking input failed! Could not determine input type.')
+  raise SystemExit('ERROR: Checking input failed! Could not determine input type.')
 print "Processed", len(input_files), "files"
 print "  example file: ", input_files[0].strip()
 
@@ -175,18 +175,18 @@ print "  example file: ", input_files[0].strip()
 if args.input_cmslpc:
   ret = os.system('eos root://cmseos.fnal.gov ls ' + input_files[0] + ' > /dev/null')
   if not ret == 0:
-    raise Exception('Input is not a valid file on cmslpc eos area! Did you mean to use --input_dataset?')
+    raise SystemExit('ERROR: Input is not a valid file on cmslpc eos area! Did you mean to use --input_dataset?')
 elif args.input_local:
   if not os.path.isfile(args.input) and not os.path.isdir(args.input):
-    raise Exception('Input is not a valid directory or file on hexcms!')
+    raise SystemExit('ERROR: Input is not a valid directory or file on hexcms!')
 elif args.input_dataset:
-  if False: raise Exception()
+  if False: raise SystemExit('')
 else:
-  raise Exception('Testing input failed! Could not determine input type.') 
+  raise SystemExit('ERROR: Testing input failed! Could not determine input type.') 
 
 # check output
 if args.output[0] == '.':
-  raise Exception('Must use absolute path for output location!')
+  raise SystemExit('ERROR: Must use absolute path for output location!')
 output_not_set = False
 if not args.output[0:7] == '/store/':
   args.output_local = True
@@ -195,29 +195,29 @@ elif args.output_local == False and args.output_cmslpc == False:
 if output_not_set and site == "hexcms": args.output_local = True
 if output_not_set and site == "cmslpc": args.output_cmslpc = True
 if args.output_local:
-  if site == "cmslpc": raise Exception('Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
+  if site == "cmslpc": raise SystemExit('ERROR: Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
   if not os.path.isdir(args.output):
     #print "\nMaking output directory, because it does not already exist ..."
     ret = os.system('mkdir -p ' + args.output)
-    if not ret == 0: raise Exception('Failed to create job output directory!')
+    if not ret == 0: raise SystemExit('ERROR: Failed to create job output directory!')
 if site == "cmslpc" and args.output_cmslpc:
   #print "Ensuring output eos location exists ..."
   ret = os.system("eos root://cmseos.fnal.gov mkdir -p " + args.output)
-  if not ret == 0: raise Exception('Failed to create job output directory!')
+  if not ret == 0: raise SystemExit('ERROR: Failed to create job output directory!')
 
 # test output
 if args.output_cmslpc:
   os.system('touch blank.txt')
   ret = os.system('xrdcp --nopbar blank.txt root://cmseos.fnal.gov/' + args.output)
-  if not ret == 0: raise Exception('Failed to xrdcp test file into output eos area!')
+  if not ret == 0: raise SystemExit('ERROR: Failed to xrdcp test file into output eos area!')
   ret = os.system("eos root://cmseos.fnal.gov rm " + args.output + "/blank.txt &> /dev/null")
-  if not ret == 0: raise Exception('Failed eosrm test file from output eos area!')
+  if not ret == 0: raise SystemExit('ERROR: Failed eosrm test file from output eos area!')
   os.system('rm blank.txt')
 
 # make job directory
 job_dir = 'Job_' + args.dir
 if os.path.isdir("./"+job_dir) and not args.force:
-  raise Exception("Directory " + job_dir + " already exists. Use option -f to overwrite")
+  raise SystemExit("ERROR: Directory " + job_dir + " already exists. Use option -f to overwrite")
 if os.path.isdir("./"+job_dir) and args.force:
   os.system('rm -rf ./' + job_dir)
 os.system('mkdir ' + job_dir)
@@ -292,7 +292,7 @@ if args.rebuild:
   os.system('./' + src_setup_script)
   print "\nFinished setting up directory to ship with job.\n"
 if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
-  raise Exception("Scratch area not prepared, use option --rebuild to create")
+  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 
 # define submit files
 sub = htcondor.Submit()
