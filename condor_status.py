@@ -34,7 +34,6 @@ if args.verbose: print "DEBUG: Get Schedd"
 coll = htcondor.Collector()
 schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
 for s in schedd_query:
-  print s["Name"]
   if str(s["Name"]) == str(schedd_name):
     schedd_ad = s
 schedd = htcondor.Schedd(schedd_ad)
