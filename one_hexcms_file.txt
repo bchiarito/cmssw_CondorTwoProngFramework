@@ -1,1 +1,0 @@
-/cms/chiarito/rootfiles/signal/cmslpc_steffie_run/miniAOD_91.root

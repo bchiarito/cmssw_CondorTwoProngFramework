@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import sys
 import subprocess
@@ -7,6 +8,7 @@ import math
 import re
 import time
 import socket
+sys.path.append(os.path.join(sys.path[0],'include'))
 import dataset_management as dm
 from datetime import date
 from itertools import izip_longest
@@ -19,6 +21,7 @@ elif 'cern.ch' in hostname: site = 'lxplus'
 else: raise SystemExit('ERROR: Unrecognized site: not hexcms, cmslpc, or lxplus')
 
 # constants
+helper_dir = 'for_submit'
 executable = 'condor_execute.sh'
 src_setup_script = 'cmssw_src_setup.sh'
 submit_file_filename = 'submit_file.jdl'
@@ -60,24 +63,23 @@ parser = argparse.ArgumentParser(description="")
 parser.add_argument("input", 
 help="The input miniAOD. Can be: absolute path to local directory/file, \
 text file with one file per line (must end in .txt), or dataset name (/*/*/MINIAOD(SIM)). \
-The --input_* options can be used to override automatic selection of input location \
-in case the automatic selection fails.")
+The --input_* options can be used to override automatic assumption input location")
 input_options = parser.add_mutually_exclusive_group()
 input_options.add_argument("--input_local", action="store_true",
-help="indicate that input is on the local filesystem")
+help="input is on the local filesystem")
 input_options.add_argument("--input_cmslpc", action="store_true",
-help="indicate that input is an eos area on cmslpc")
+help="input is an eos area on cmslpc")
 input_options.add_argument("--input_dataset", action="store_true",
-help="indicate that input is an official dataset")
+help="input is an official dataset")
 parser.add_argument("output", 
 help="The output location of the condor jobs. Can be: absoulte path to local directory, \
 or cmslpc eos storage (/store/user/...). The --output_* options can be used to overwite \
-automatic selection of output location in case the automatic selection fails.")
+automatic assumption of output location.")
 output_options = parser.add_mutually_exclusive_group()
 output_options.add_argument("--output_local", action="store_true",
-help="indicate that output is written to local filesystem")
+help="output is written to local filesystem")
 output_options.add_argument("--output_cmslpc", action="store_true",
-help="indicate that output is written to an eos area on cmslpc")
+help="output is written to an eos area on cmslpc")
 
 # job structure
 parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
@@ -254,7 +256,7 @@ for filename in input_filenames:
 TOTAL_JOBS = len(input_filenames)
 
 # prepare unpacker script
-template_filename = "template_"+unpacker_filename
+template_filename = helper_dir+"/template_"+unpacker_filename
 replaced_filename = unpacker_filename
 to_replace = {}
 to_replace['__inputfilefilenamebase__'] = input_file_filename_base
@@ -272,7 +274,7 @@ use_template_to_replace(template_filename, replaced_filename, to_replace)
 os.system('mv ' + replaced_filename + ' ' + job_dir)
 
 # prepare stageout script
-template_filename = "template_"+stageout_filename
+template_filename = helper_dir+"/template_"+stageout_filename
 replaced_filename = stageout_filename
 to_replace = {}
 to_replace['__finalfile__'] = finalfile_filename
@@ -289,14 +291,14 @@ os.system('mv ' + replaced_filename + ' ' + job_dir)
 # prepare prebuild area to send with job
 if args.rebuild:
   print "Setting up src directory (inside ./"+cmssw_prebuild_area+") to ship with job"
-  os.system('./' + src_setup_script)
+  os.system('./' + helper_dir +'/'+ src_setup_script)
   print "\nFinished setting up directory to ship with job.\n"
 if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 
 # define submit files
 sub = htcondor.Submit()
-sub['executable'] = executable
+sub['executable'] = helper_dir+'/'+executable
 sub['arguments'] = unpacker_filename + " " + stageout_filename + " $(Process)"
 sub['should_transfer_files'] = 'YES'
 sub['+JobFlavor'] = 'longlunch'
@@ -324,7 +326,7 @@ with open(submit_file_filename, 'w') as f:
   f.write(sub.__str__())
   f.write('\n# Command:\n#'+command)
 os.system('mv ' + submit_file_filename + ' ' + job_dir)
-os.system('cp ' + executable + ' ' + job_dir)
+os.system('cp ' + helper_dir +'/'+ executable + ' ' + job_dir)
 
 # get the schedd
 coll = htcondor.Collector()
@@ -363,7 +365,7 @@ with schedd.transaction() as txn:
   print "ClusterId: ", cluster_id
 
 # prepare job_info.py file
-template_filename = "template_"+jobinfo_filename
+template_filename = helper_dir+"/template_"+jobinfo_filename
 replaced_filename = jobinfo_filename
 to_replace = {}
 to_replace['__cluster__'] = str(cluster_id)
