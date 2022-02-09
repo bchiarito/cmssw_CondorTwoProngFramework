@@ -61,7 +61,7 @@ pwd
 ls -ldh *
 echo ''
 echo '&&& cmsRun cfg.py inputFilesFile=cmssw_infiles_X.dat &&&'
-cmsRun NANOAOD_mc_UL18_cfg.py inputFilesFile=cmssw_infiles_$3.dat
+cmsRun NANOAOD_mc_UL18_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$4
 echo ''
 ls -ldh *.root
 echo ''

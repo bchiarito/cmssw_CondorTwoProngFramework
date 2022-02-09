@@ -84,16 +84,16 @@ help="output is written to an eos area on cmslpc")
 # job structure
 parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
 help="name of job directory, created in current directory")
-parser.add_argument("-n", "--num", default=1, type=int,
+parser.add_argument("-n", "--num", default=1, type=int, metavar='INT',
 help="number of subjobs in the job (default is 1)")
-parser.add_argument("-m", "--maxFiles", default=-1, type=int,
-help="max number of files to include from input area (default is -1, meaning all files)")
+parser.add_argument("--files", default=-1, type=int, metavar='maxFiles',
+help="maximum number of files to include from input area (default is -1, meaning all files)")
 parser.add_argument("--useLFN", default=False, action="store_true",
-help="use with official dataset: do not use xrdcp, instead supply LFN to cmssw config")
+help="when running on dataset do not use xrdcp, instead supply LFN directly to cmssw config")
+parser.add_argument("-L", "--lumiMask", default=None, metavar='', dest='lumiMask',
+help="path to lumi mask json file")
 
 # convenience
-parser.add_argument("-w", "--wait", default=False, action="store_true",
-help="wait for the job using condor_wait after submitting")
 parser.add_argument("-f", "--force", action="store_true",
 help="overwrite job directory if it already exists")
 parser.add_argument("-b", "--rebuild", default=False, action="store_true",
@@ -132,7 +132,7 @@ if s[len(s)-4:len(s)] == ".txt":
     for line in f:
       input_files.append(line.strip())
       #print "  input file: ", line.strip()
-      if len(input_files) == args.maxFiles: break
+      if len(input_files) == args.files: break
 # input is local
 elif args.input_local:
   if os.path.isfile(args.input):
@@ -148,7 +148,7 @@ elif args.input_local:
       if not line.find(".root") == -1:
         input_files.append(line)
         #print "  found local file: ", line
-        if len(input_files) == args.maxFiles: break
+        if len(input_files) == args.files: break
     print ""
 # input is eos area on cmslc
 elif args.input_cmslpc:
@@ -161,12 +161,12 @@ elif args.input_cmslpc:
     for line in list_of_files:
       input_files.append(line)
       #print "  found eos file: ", line
-      if len(input_files) == args.maxFiles: break
+      if len(input_files) == args.files: break
 # input is dataset name
 elif args.input_dataset:
   dataset_name = args.input
   if not dm.isCached(dataset_name, dataset_cache): dm.process(dataset_name, dataset_cache)
-  input_files = dm.getFiles(dataset_name, dataset_cache, args.maxFiles)
+  input_files = dm.getFiles(dataset_name, dataset_cache, args.files)
   #print "  example dataset file: ", input_files[0].strip()
 else:
   raise SystemExit('ERROR: Checking input failed! Could not determine input type.')
@@ -182,7 +182,7 @@ elif args.input_local:
   if not os.path.isfile(args.input) and not os.path.isdir(args.input):
     raise SystemExit('ERROR: Input is not a valid directory or file on hexcms!')
 elif args.input_dataset:
-  if False: raise SystemExit('')
+  if False: pass
 else:
   raise SystemExit('ERROR: Testing input failed! Could not determine input type.') 
 
@@ -205,7 +205,7 @@ if args.output_local:
 if site == "cmslpc" and args.output_cmslpc:
   #print "Ensuring output eos location exists ..."
   ret = os.system("eos root://cmseos.fnal.gov mkdir -p " + args.output)
-  if not ret == 0: raise SystemExit('ERROR: Failed to create job output directory!')
+  if not ret == 0: raise SystemExit('ERROR: Failed to create job output directory in cmslpc eos area!')
 
 # test output
 if args.output_cmslpc:
@@ -300,6 +300,10 @@ if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
 sub = htcondor.Submit()
 sub['executable'] = helper_dir+'/'+executable
 sub['arguments'] = unpacker_filename + " " + stageout_filename + " $(Process)"
+if args.lumiMask is None:
+  sub['arguments'] += " None"
+else:
+  sub['arguments'] += " "+os.path.basename(args.lumiMask)
 sub['should_transfer_files'] = 'YES'
 sub['+JobFlavor'] = 'longlunch'
 sub['Notification'] = 'Never'
@@ -312,14 +316,16 @@ sub['transfer_input_files'] = \
   job_dir+'/infiles/'+'cmssw_'+input_file_filename_base+'_$(Process).dat' + ", " + \
   cmssw_prebuild_area+'/CMSSW_10_6_20/src/PhysicsTools' + ", " + \
   cmssw_prebuild_area+'/CMSSW_10_6_20/src/CommonTools'
+if not args.lumiMask is None:
+  sub['transfer_input_files'] += ", "+args.lumiMask
 sub['transfer_output_files'] = '""'
 sub['initialdir'] = ''
 sub['output'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['log'] = job_dir+'/log_$(Cluster).txt'
 
-# move copy of submit file and executable to job diretory 
-command = 'python '
+# move copy of various files to job diretory 
+command = ''
 for a in sys.argv:
   command += a + ' '
 with open(submit_file_filename, 'w') as f:
@@ -345,10 +351,14 @@ print ""
 print "Summary"
 print "-------"
 print "Job Directory       :", job_dir
+print "Output Directory    :", args.output
 print "Total Jobs          :", str(TOTAL_JOBS)
+print "Total Files         :", str(num_total_files)
 print "Files/Job  (approx) :", str(N)
 print "Input               : " + i_assume
 print "Output              : " + o_assume
+if not args.lumiMask is None:
+  print "Lumi Mask           : " + os.path.basename(args.lumiMask)
 print "Schedd              :", schedd_ad["Name"]
 print ""
 
@@ -374,9 +384,3 @@ to_replace['__schedd__'] = schedd_ad["Name"]
 to_replace['__output__'] = args.output
 use_template_to_replace(template_filename, replaced_filename, to_replace)
 os.system('mv ' + replaced_filename + ' ' + job_dir)
-
-# condor_wait for the job
-if args.wait:
-  print "Waiting on job with condor_wait ...\n"
-  time.sleep(1)
-  os.system('condor_wait -echo ' + job_dir + '/' + str(cluster_id) + '_log.txt')
