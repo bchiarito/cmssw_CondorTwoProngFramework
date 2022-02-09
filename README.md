@@ -1,3 +1,5 @@
+# overview
+
 python wrapper to submit condor jobs on the site where the script is run
 runs on MiniAOD to produce Custom NanoAOD. NanoAOD which includes TwoProng objects
 
@@ -20,3 +22,29 @@ For instructions, run:
 ```
 $ python condor_submit.py --help
 ```
+## checking job status
+
+An executable script ``condor_status.py`` is provided, but the following options can also be used if it fails for some reason or other
+```
+$ condor_wait -status <path/to/logfile>
+$ eosls -lh </full/path/to/output/directory>
+```
+check condor priority with
+```
+$ condor_userprio -priority
+```
+## files/job and other numbers to use when running
+
+mc: 100k events per subjob is good. 150k hits 2 day limit
+
+signal: 50k events per subjob is good. 10k finishes in 5-6 hours, 100k finishes in 44 hrs
+
+data: testing
+
+## size of output
+
+bkg mc nano: ~2.8 GB/mil
+
+signal mc nano: ~4 GB/mil
+
+data nano: testing
