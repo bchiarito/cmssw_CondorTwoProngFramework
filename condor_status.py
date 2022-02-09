@@ -55,12 +55,15 @@ for line in output.split('\n'):
   #for item in line.split():
   # print "  ", item
   if len(line.split()) == 0: continue
-  l = line.split()
-  fi = l[9]
-  #print l[4], l[5], l[9], fi[len(fi)-6]
-  size = l[4]+' '+l[5]
-  job = int(fi[len(fi)-6])
-  subjobs[job]['size'] = size
+  try:
+    l = line.split()
+    fi = l[9]
+    #print l[4], l[5], l[9], fi[len(fi)-6]
+    size = l[4]+' '+l[5]
+    job = int(fi[len(fi)-6])
+    subjobs[job]['size'] = size
+  except (IndexError, ValueError):
+    continue
 
 # parse json job report
 if args.verbose: print "DEBUG: parse job report file, creating with condor_wait ..."
@@ -91,7 +94,7 @@ with open(json_filename, 'r') as f:
     if block['MyType'] == 'JobTerminatedEvent':
       subjobs[int(block['Proc'])]['end_time'] = date
       if block['TerminatedNormally']:
-        subjobs[int(block['Proc'])]['status'] = 'succeeded'
+        subjobs[int(block['Proc'])]['status'] = 'finished'
       else:
         subjobs[int(block['Proc'])]['status'] = 'failed'
     if block['MyType'] == 'JobAbortedEvent':
