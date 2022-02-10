@@ -28,6 +28,8 @@ cluster = job.cluster
 procs = range(int(job.queue))
 schedd_name = job.schedd_name
 output_area = job.output
+if output_area[0:7] == '/store/': output_eos = True
+else: output_eos = False
 
 # get the schedd
 if args.verbose: print "DEBUG: Get Schedd"
@@ -47,22 +49,29 @@ for proc in procs:
 
 # discover output files
 if args.verbose: print "DEBUG: Discover output files"
-if args.verbose: print "DEBUG: command", 'eos root://cmseos.fnal.gov ls -lh '+output_area
-output = subprocess.check_output('eos root://cmseos.fnal.gov ls -lh '+output_area, shell=True)
+if output_eos:
+  if args.verbose: print "DEBUG: command", 'eos root://cmseos.fnal.gov ls -lh '+output_area
+  output = subprocess.check_output('eos root://cmseos.fnal.gov ls -lh '+output_area, shell=True)
+else: # local
+  if args.verbose: print "DEBUG: command", 'ls -lh '+output_area
+  output = subprocess.check_output('ls -lh '+output_area, shell=True) 
 #print output
 for line in output.split('\n'):
   #print len(line.split())
   #for item in line.split():
-  # print "  ", item
-  if len(line.split()) == 0: continue
+  #  print "  ", item
+  #if len(line.split()) == 0: continue
   try:
     l = line.split()
-    fi = l[9]
-    #print l[4], l[5], l[9], fi[len(fi)-6]
-    size = l[4]+' '+l[5]
+    fi = l[len(l)-1]
+    if output_eos: size = l[4]+' '+l[5]
+    else:
+      temp = l[4]
+      size = temp[0:len(temp)-1]+' '+temp[len(temp)-1]
     job = int(fi[len(fi)-6])
     subjobs[job]['size'] = size
   except (IndexError, ValueError):
+    print "WARNING: got IndexError or ValueError, may want to check output area directly with (eos) ls."
     continue
 
 # parse json job report
