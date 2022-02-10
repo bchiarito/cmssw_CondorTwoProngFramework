@@ -14,9 +14,9 @@ UnitTest()
   printf "\n--- Test 2 ---\n\n"
   python condor_submit.py $test_file_eos /store/user/bchiari1/unit_tests/ -d unit_test_cmslpc -t -f
   printf "\n--- Test 3 ---\n\n"
-  python condor_submit.py /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM -m 1 /store/user/bchiari1/unit_tests/ -d unit_test_cmslpc -t -f
+  python condor_submit.py /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM --files 1 /store/user/bchiari1/unit_tests/ -d unit_test_cmslpc -t -f
   printf "\n--- Test 4 ---\n\n"
-  python condor_submit.py /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM -m 1 /store/user/bchiari1/unit_tests/ -d unit_test_cmslpc -t -f --useLFN
+  python condor_submit.py /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM --files 1 /store/user/bchiari1/unit_tests/ -d unit_test_cmslpc -t -f --useLFN
 }
 Rebuild()
 {

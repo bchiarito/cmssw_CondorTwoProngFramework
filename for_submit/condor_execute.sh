@@ -55,13 +55,14 @@ cd PhysicsTools/PFNano/test/
 export CMSRUN_DIR=$(pwd)
 mv $INITIAL_DIR/cmssw_infiles_$3.dat .
 mv $INITIAL_DIR/*.root .
+mv $INITIAL_DIR/Cert_*JSON*.txt .
 echo ''
 echo '&&& Current Directory and Contents: &&&'
 pwd
 ls -ldh *
 echo ''
 echo '&&& cmsRun cfg.py inputFilesFile=cmssw_infiles_X.dat &&&'
-cmsRun NANOAOD_mc_UL18_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$4
+cmsRun NANOAOD_$4_UL18_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$5
 echo ''
 ls -ldh *.root
 echo ''

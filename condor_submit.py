@@ -61,9 +61,8 @@ parser = argparse.ArgumentParser(description="")
 
 # input/output
 parser.add_argument("input", 
-help="The input miniAOD. Can be: absolute path to local directory/file, \
-text file with one file per line (must end in .txt), or dataset name (/*/*/MINIAOD(SIM)). \
-The --input_* options can be used to override automatic assumption input location")
+help="Absolute path to local directory/file, cmslpc eos storage (/store/user/...), \
+text file (end in .txt) with one file location per line, or dataset name (/*/*/MINIAOD(SIM)).")
 input_options = parser.add_mutually_exclusive_group()
 input_options.add_argument("--input_local", action="store_true",
 help="input is on the local filesystem")
@@ -72,16 +71,23 @@ help="input is an eos area on cmslpc")
 input_options.add_argument("--input_dataset", action="store_true",
 help="input is an official dataset")
 parser.add_argument("output", 
-help="The output location of the condor jobs. Can be: absoulte path to local directory, \
-or cmslpc eos storage (/store/user/...). The --output_* options can be used to overwite \
-automatic assumption of output location.")
+help="Absoulte path to local directory, or cmslpc eos storage (/store/user/...).")
 output_options = parser.add_mutually_exclusive_group()
 output_options.add_argument("--output_local", action="store_true",
 help="output is written to local filesystem")
 output_options.add_argument("--output_cmslpc", action="store_true",
 help="output is written to an eos area on cmslpc")
 
-# job structure
+# run specification
+datamc_options = parser.add_mutually_exclusive_group()
+datamc_options.add_argument("--mc", action="store_true",
+help="running on mc (default)")
+datamc_options.add_argument("--data", action="store_true",
+help="running on data")
+parser.add_argument("-L", "--lumiMask", default=None, metavar='', dest='lumiMask',
+help="path to lumi mask json file")
+
+# meta-run specification
 parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
 help="name of job directory, created in current directory")
 parser.add_argument("-n", "--num", default=1, type=int, metavar='INT',
@@ -90,8 +96,6 @@ parser.add_argument("--files", default=-1, type=int, metavar='maxFiles',
 help="maximum number of files to include from input area (default is -1, meaning all files)")
 parser.add_argument("--useLFN", default=False, action="store_true",
 help="when running on dataset do not use xrdcp, instead supply LFN directly to cmssw config")
-parser.add_argument("-L", "--lumiMask", default=None, metavar='', dest='lumiMask',
-help="path to lumi mask json file")
 
 # convenience
 parser.add_argument("-f", "--force", action="store_true",
@@ -104,16 +108,20 @@ help="don't submit condor job but do all other steps")
 # not used yet
 #parser.add_argument("-y", "--year", default="UL18",
 #help="prescription to follow, e.g., UL18, UL17, UL16")
-#mc_options = parser.add_mutually_exclusive_group()
-#mc_options.add_argument("--mc", action="store_true",
-#help="running on mc")
-#mc_options.add_argument("--data", action="store_true",
-#help="running on data")
 #parser.add_argument("-v", "--verbose", action="store_true",
 #help="ask for verbose output")
 
 # end command line options
 args = parser.parse_args()
+
+# check data/mc
+if not args.mc and not args.data: args.mc = True
+if args.mc: datamc = "mc"
+elif args.data: datamc = "data"
+if args.mc and not args.lumiMask == None:
+  raise SystemExit("Configuration Error: Using lumi mask with MC!")
+if args.data and args.lumiMask == None:
+  raise SystemExit("Configuration Error: Running on data, but provided no lumi mask!")
 
 # check input
 input_not_set = False
@@ -299,7 +307,7 @@ if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
 # define submit files
 sub = htcondor.Submit()
 sub['executable'] = helper_dir+'/'+executable
-sub['arguments'] = unpacker_filename + " " + stageout_filename + " $(Process)"
+sub['arguments'] = unpacker_filename + " " + stageout_filename + " "+datamc+" " + " $(Process)"
 if args.lumiMask is None:
   sub['arguments'] += " None"
 else:
@@ -351,12 +359,12 @@ print ""
 print "Summary"
 print "-------"
 print "Job Directory       :", job_dir
-print "Output Directory    :", args.output
 print "Total Jobs          :", str(TOTAL_JOBS)
 print "Total Files         :", str(num_total_files)
 print "Files/Job  (approx) :", str(N)
-print "Input               : " + i_assume
+print "Input               : " + i_assume +" ("+datamc+")"
 print "Output              : " + o_assume
+print "Output Directory    :", args.output
 if not args.lumiMask is None:
   print "Lumi Mask           : " + os.path.basename(args.lumiMask)
 print "Schedd              :", schedd_ad["Name"]
