@@ -361,7 +361,7 @@ print "-------"
 print "Job Directory       :", job_dir
 print "Total Jobs          :", str(TOTAL_JOBS)
 print "Total Files         :", str(num_total_files)
-print "Files/Job  (approx) :", str(N)
+print "Files/Job (approx)  :", str(N)
 print "Input               : " + i_assume +" ("+datamc+")"
 print "Output              : " + o_assume
 print "Output Directory    :", args.output
