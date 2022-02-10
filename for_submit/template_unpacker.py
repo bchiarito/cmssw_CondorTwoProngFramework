@@ -7,6 +7,9 @@ copy_command = '__copycommand__'
 redirector = "__redirector__"
 RETRIES = 2
 
+if copy_command == 'NULL':
+  sys.exit()
+
 with open(input_file_filename) as f:
   for line in f:
     print "Unpacker: command:", copy_command + " " + redirector + line.strip() + " ."

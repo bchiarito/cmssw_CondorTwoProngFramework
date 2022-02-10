@@ -106,6 +106,8 @@ parser.add_argument("-b", "--rebuild", default=False, action="store_true",
 help="remake cmssw prebuild area needed to ship with job")
 parser.add_argument("-t", "--test", default=False, action="store_true",
 help="don't submit condor job but do all other steps")
+parser.add_argument("--nopass", default=False, action="store_true",
+help="do not prompt for new grid certificate")
 
 # not used yet
 #parser.add_argument("-y", "--year", default="UL18",
@@ -259,7 +261,7 @@ for count,set_of_lines in enumerate(grouper(input_files, N, '')):
         line = line[i+1:len(line)]
         fi.write('file:'+line.strip()+'\n')
       if args.useLFN:
-        fi.write(line+'\n')
+        fi.write(line.strip()+'\n')
 for filename in input_filenames:
   os.system('mv ' + filename + ' ' + job_dir + '/infiles/')
   os.system('mv cmssw_' + filename + ' ' + job_dir + '/infiles/')
@@ -278,7 +280,7 @@ if args.input_cmslpc:
   to_replace['__copycommand__'] = 'xrdcp --nopbar'
 if args.input_dataset:
   to_replace['__redirector__'] = 'root://cmsxrootd.fnal.gov/'
-  if args.useLFN: to_replace['__copycommand__'] = 'echo'
+  if args.useLFN: to_replace['__copycommand__'] = 'NULL'
   else: to_replace['__copycommand__'] = 'xrdcp --nopbar'
 use_template_to_replace(template_filename, replaced_filename, to_replace)
 os.system('mv ' + replaced_filename + ' ' + job_dir)
@@ -375,9 +377,9 @@ print ""
 # submit the job
 if args.test:
   print "Just a test, Exiting."
-  os.system('rm -rf ' + job_dir)
+  #os.system('rm -rf ' + job_dir)
   sys.exit()
-if site == 'cmslpc':
+if site == 'cmslpc' and not args.nopass:
   os.system('voms-proxy-init --valid 192:00 -voms cms')
 print "Submitting Jobs ..."
 with schedd.transaction() as txn:
