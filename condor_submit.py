@@ -96,6 +96,8 @@ parser.add_argument("--files", default=-1, type=int, metavar='maxFiles',
 help="maximum number of files to include from input area (default is -1, meaning all files)")
 parser.add_argument("--useLFN", default=False, action="store_true",
 help="when running on dataset do not use xrdcp, instead supply LFN directly to cmssw config")
+parser.add_argument("--proxy", default='/tmp/x509up_u756',
+help="location of proxy file, only used on hexcms")
 
 # convenience
 parser.add_argument("-f", "--force", action="store_true",
@@ -307,7 +309,7 @@ if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
 # define submit files
 sub = htcondor.Submit()
 sub['executable'] = helper_dir+'/'+executable
-sub['arguments'] = unpacker_filename + " " + stageout_filename + " "+datamc+" " + " $(Process)"
+sub['arguments'] = unpacker_filename + " " + stageout_filename + " $(Process) " + datamc
 if args.lumiMask is None:
   sub['arguments'] += " None"
 else:
@@ -316,7 +318,7 @@ sub['should_transfer_files'] = 'YES'
 sub['+JobFlavor'] = 'longlunch'
 sub['Notification'] = 'Never'
 if site == 'cmslpc': sub['use_x509userproxy'] = 'true'
-if site == 'hexcms': sub['x509userproxy'] = ''
+if site == 'hexcms': sub['x509userproxy'] = args.proxy
 sub['transfer_input_files'] = \
   job_dir+'/'+unpacker_filename + ", " + \
   job_dir+'/'+stageout_filename + ", " + \

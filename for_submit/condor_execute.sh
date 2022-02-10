@@ -8,6 +8,12 @@ pwd
 ls -ldh *
 echo ''
 
+if [ -f /osg/current/setup.sh ]; then
+  echo "&&& Sourcing grid environment for hexcms &&&"
+  source /osg/current/setup.sh
+  echo ''
+fi
+
 echo '&&& Running input unpacker script with command: &&&'
 echo 'python' $1 $3
 python $1 $3
