@@ -96,7 +96,7 @@ parser.add_argument("--files", default=-1, type=int, metavar='maxFiles',
 help="maximum number of files to include from input area (default is -1, meaning all files)")
 parser.add_argument("--useLFN", default=False, action="store_true",
 help="when running on dataset do not use xrdcp, instead supply LFN directly to cmssw config")
-parser.add_argument("--proxy", default='/tmp/x509up_u756',
+parser.add_argument("--proxy", default='',
 help="location of proxy file, only used on hexcms")
 
 # convenience
@@ -320,7 +320,7 @@ sub['should_transfer_files'] = 'YES'
 sub['+JobFlavor'] = 'longlunch'
 sub['Notification'] = 'Never'
 if site == 'cmslpc': sub['use_x509userproxy'] = 'true'
-if site == 'hexcms': sub['x509userproxy'] = args.proxy
+if site == 'hexcms': sub['x509userproxy'] = os.path.basename(args.proxy)
 sub['transfer_input_files'] = \
   job_dir+'/'+unpacker_filename + ", " + \
   job_dir+'/'+stageout_filename + ", " + \
@@ -374,13 +374,22 @@ if not args.lumiMask is None:
 print "Schedd              :", schedd_ad["Name"]
 print ""
 
-# submit the job
+# check proxy
+if not args.test:
+  if site == 'cmslpc' and not args.nopass:
+    os.system('voms-proxy-init --valid 192:00 -voms cms')
+if site == 'hexcms' and args.input_dataset and args.proxy == '':
+  raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-info and provide 'path' variable to --proxy")
+if site == 'hexcms' and args.input_dataset and not args.proxy == '':
+  if not os.path.isfile(os.path.basename(args.proxy)):
+    os.system('cp '+args.proxy+' .')
+    
+# premature exit, test
 if args.test:
   print "Just a test, Exiting."
-  #os.system('rm -rf ' + job_dir)
   sys.exit()
-if site == 'cmslpc' and not args.nopass:
-  os.system('voms-proxy-init --valid 192:00 -voms cms')
+
+# submit the job
 print "Submitting Jobs ..."
 with schedd.transaction() as txn:
   cluster_id = sub.queue(txn, count=TOTAL_JOBS)

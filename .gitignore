@@ -1,3 +1,4 @@
 Job_*/
 prebuild/
 *.pyc
+x509up*

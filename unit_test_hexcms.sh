@@ -8,9 +8,9 @@ UnitTest()
   printf "\n--- Test 1 ---\n\n"
   python condor_submit.py $test_file_local /home/chiarito/unit_test_hexcms/ -d unit_test_hexcms -t -f
   printf "\n--- Test 2 ---\n\n"
-  python condor_submit.py /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM --files 1 /cms/chiarito/eos/for_condor/unit_test_hexcms/ -d unit_test_cmslpc -t -f
+  python condor_submit.py /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM --files 1 /cms/chiarito/eos/for_condor/unit_test_hexcms/ -d unit_test_hexcms -t -f --proxy /tmp/x509up_u756
   printf "\n--- Test 3 ---\n\n"
-  python condor_submit.py /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM --files 1 /cms/chiarito/eos/for_condor/unit_test_hexcms/ -d unit_test_cmslpc -t -f --useLFN
+  python condor_submit.py /DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM --files 1 /cms/chiarito/eos/for_condor/unit_test_hexcms/ -d unit_test_hexcms -t -f --useLFN --proxy /tmp/x509up_u756
 }
 Rebuild()
 {
@@ -32,3 +32,4 @@ while getopts ":b" option; do
    esac
 done
 NoRebuild
+rm -rf Job_unit_test_hexcms

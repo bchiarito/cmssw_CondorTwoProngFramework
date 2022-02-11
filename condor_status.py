@@ -55,12 +55,11 @@ if output_eos:
 else: # local
   if args.verbose: print "DEBUG: command", 'ls -lh '+output_area
   output = subprocess.check_output('ls -lh '+output_area, shell=True) 
-#print output
 for line in output.split('\n'):
   #print len(line.split())
   #for item in line.split():
   #  print "  ", item
-  #if len(line.split()) == 0: continue
+  if len(line.split()) <= 2: continue
   try:
     l = line.split()
     fi = l[len(l)-1]
