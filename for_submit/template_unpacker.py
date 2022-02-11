@@ -8,6 +8,7 @@ redirector = "__redirector__"
 RETRIES = 2
 
 if copy_command == 'NULL':
+  print "Unpacker: Got NULL, will not try to copy any files."
   sys.exit()
 
 with open(input_file_filename) as f:
