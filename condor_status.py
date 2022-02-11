@@ -67,7 +67,9 @@ for line in output.split('\n'):
     else:
       temp = l[4]
       size = temp[0:len(temp)-1]+' '+temp[len(temp)-1]
-    job = int(fi[len(fi)-6])
+    u = fi.rfind('_')
+    d = fi.rfind('.')
+    job = int(fi[u+1:d])
     subjobs[job]['size'] = size
   except (IndexError, ValueError):
     print "WARNING: got IndexError or ValueError, may want to check output area directly with (eos) ls."
