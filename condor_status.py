@@ -14,8 +14,8 @@ import htcondor
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("jobDir",help="the condor_submit.py job directory")
 parser.add_argument("-v", "--verbose", default=False, action="store_true",help="turn on debug messages")
+parser.add_argument("-s", "--summary", default=False, action="store_true",help="do not print one line per job, instead summarize number of jobs with each status type")
 parser.add_argument("--onlyFinished", default=False, action="store_true",help="ignore 'running' and 'submitted' job Ids")
-parser.add_argument("--summary", default=False, action="store_true",help="do not print one line per job, instead summarize number of jobs with each status type")
 args = parser.parse_args()
 
 # constants
@@ -152,7 +152,7 @@ if args.summary:
   total = 0
   for key in summary:
     total += summary[key]
-  print '{:<15} | {}'.format('  Status', '  Job Ids ({} total)'.format(total))
+  print '{:<15} | {}'.format('Status', 'Job Ids ({} total)'.format(total))
   for status in summary:
     print '{:<15} | {}'.format(str(status), str(summary[status]))
 
