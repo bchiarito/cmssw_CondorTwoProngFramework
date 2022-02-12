@@ -14,7 +14,8 @@ import htcondor
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("jobDir",help="the condor_submit.py job directory")
 parser.add_argument("-v", "--verbose", default=False, action="store_true",help="turn on debug messages")
-parser.add_argument("-s", "--short", default=False, action="store_true",help="make Msg shorter")
+parser.add_argument("--onlyFinished", default=False, action="store_true",help="ignore 'running' and 'submitted' job Ids")
+parser.add_argument("--summary", default=False, action="store_true",help="do not print one line per job, instead summarize number of jobs with each status type")
 args = parser.parse_args()
 
 # constants
@@ -87,14 +88,8 @@ with open(json_filename, 'r') as f:
     #print "next block:"
     #print match.group(0)
     block = json.loads(match.group(0))
-    #print "summary:"
-    #print block['MyType']
-    #print block['EventTime']
-    #print block['Proc']
     date = time.strptime(str(block['EventTime']), '%Y-%m-%dT%H:%M:%S')
     t = timegm(date)
-    #print t
-    #print "done."
     if block['MyType'] == 'SubmitEvent':
       subjobs[int(block['Proc'])]['start_time'] = date
       subjobs[int(block['Proc'])]['status'] = 'submitted'
@@ -115,7 +110,6 @@ with open(json_filename, 'r') as f:
       subjobs[int(block['Proc'])]['end_time'] = date
       subjobs[int(block['Proc'])]['reason'] = block['HoldReason']    
       subjobs[int(block['Proc'])]['status'] = 'held'
-    #raw_input()
       
 if args.verbose: print "DEBUG: Directory so far"
 for num in subjobs:
@@ -128,32 +122,41 @@ if args.verbose: print ""
 # Print Status
 print "Results for ClusterId", cluster, "at schedd", schedd_name
 print "Job output area:", output_area
-print ' {:<5}| {:<10}| {:<21}| {:<20}| {}'.format(
+if not args.summary: print ' {:<5}| {:<15}| {:<21}| {:<20}| {}'.format(
        'Proc', 'Status', 'Run Time', 'Output File Size', 'Msg'
 )
+if args.summary: summary = {}
 for jobNum in subjobs:
   subjob = subjobs[jobNum]
   status = subjob.get('status','')
   reason = subjob.get('reason','')
-  if not args.short: reason = reason[0:80]
-  else: reason = reason[0:40]
+  reason = reason[0:80]
   if 'start_time' in subjob and 'end_time' in subjob:
     totalTime = str(datetime.timedelta(seconds = timegm(subjob['end_time']) - timegm(subjob['start_time'])))
   elif 'start_time' in subjob:
     totalTime = str(datetime.timedelta(seconds = timegm(time.localtime()) - timegm(subjob['start_time'])))
-    #print subjob['start_time']
-    #print time.localtime()
-    #print calendar.timegm(subjob['start_time'])
-    #print calendar.timegm(time.localtime())
-    #print calendar.timegm(time.localtime()) - calendar.timegm(subjob['start_time'])
   elif 'end_time' in subjob:
     totalTime = time.strftime('%m/%d %H:%M:%S', subjob['end_time']) + " (end)"
   else:
     totalTime = ''
   size = subjob.get('size', "")
-  print ' {:<5}| {:<10}| {:<21}| {:<20}| {}'.format(
+  if status=='finished' and size=='': status = 'fin w/o output'
+  if args.onlyFinished and (status=='submitted' or status=='running'): continue
+  if not args.summary: print ' {:<5}| {:<15}| {:<21}| {:<20}| {}'.format(
          str(jobNum), str(status), str(totalTime), str(size), str(reason)
   )
+  if args.summary:
+    if status in summary: summary[status] += 1
+    else: summary[status] = 1
+if args.summary:
+  total = 0
+  for key in summary:
+    total += summary[key]
+  print '{:<15} | {}'.format('  Status', '  Job Ids ({} total)'.format(total))
+  for status in summary:
+    print '{:<15} | {}'.format(str(status), str(summary[status]))
+
+# Cleanup
 os.system('rm '+json_filename)
 
 # print current jobs
