@@ -38,9 +38,12 @@ cmssw_prebuild_area = 'prebuild'
 try:
   import classad
   import htcondor
-except ImportError:
+except ImportError as err:
   if site == 'hexcms':
     raise SystemExit('ERROR: On hexcms, please source this file before running: ' + fix_condor_hexcms_script)
+  if site == 'cmslpc':
+    print 'ERROR: Could not import classad or htcondor. Verify that python is default and not from cmssw release (do not cmsenv).'
+    raise err
 
 # subroutines
 def grouper(iterable, n, fillvalue=None):
