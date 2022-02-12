@@ -21,7 +21,7 @@ elif 'cern.ch' in hostname: site = 'lxplus'
 else: raise SystemExit('ERROR: Unrecognized site: not hexcms, cmslpc, or lxplus')
 
 # constants
-helper_dir = 'for_submit'
+helper_dir = 'helper'
 executable = 'condor_execute.sh'
 src_setup_script = 'cmssw_src_setup.sh'
 submit_file_filename = 'submit_file.jdl'
@@ -30,7 +30,7 @@ finalfile_filename = 'NANOAOD_TwoProng.root'
 unpacker_filename = 'unpacker.py'
 stageout_filename = 'stageout.py'
 jobinfo_filename = 'job_info.py'
-dataset_cache = 'saved_datasets'
+dataset_cache = 'datasets'
 fix_condor_hexcms_script = 'hexcms_fix_python.sh'
 cmssw_prebuild_area = 'prebuild'
 
@@ -87,7 +87,9 @@ datamc_options.add_argument("--mc", action="store_true",
 help="running on mc (default)")
 datamc_options.add_argument("--data", action="store_true",
 help="running on data")
-parser.add_argument("-L", "--lumiMask", default=None, metavar='', dest='lumiMask',
+parser.add_argument("-y", "--year", default="UL18",
+help="prescription to follow: UL18 (default), UL17, UL16")
+parser.add_argument("--lumiMask", default=None, metavar='', dest='lumiMask',
 help="path to lumi mask json file")
 
 # meta-run specification
@@ -108,15 +110,7 @@ help="overwrite job directory if it already exists")
 parser.add_argument("-b", "--rebuild", default=False, action="store_true",
 help="remake cmssw prebuild area needed to ship with job")
 parser.add_argument("-t", "--test", default=False, action="store_true",
-help="don't submit condor job but do all other steps")
-parser.add_argument("--nopass", default=False, action="store_true",
-help="do not prompt for new grid certificate")
-
-# not used yet
-#parser.add_argument("-y", "--year", default="UL18",
-#help="prescription to follow, e.g., UL18, UL17, UL16")
-#parser.add_argument("-v", "--verbose", action="store_true",
-#help="ask for verbose output")
+help="don't submit condor jobs but do all other steps")
 
 # end command line options
 args = parser.parse_args()
@@ -129,6 +123,12 @@ if args.mc and not args.lumiMask == None:
   raise SystemExit("Configuration Error: Using lumi mask with MC!")
 if args.data and args.lumiMask == None:
   raise SystemExit("Configuration Error: Running on data, but provided no lumi mask!")
+
+# check year
+if not (args.year == 'UL18' or
+        args.year == 'UL17' or
+        args.year == 'UL16'):
+  raise SystemExit('ERROR: --year must be one of: UL18, UL17, UL16')
 
 # check input
 input_not_set = False
@@ -185,8 +185,10 @@ elif args.input_dataset:
   #print "  example dataset file: ", input_files[0].strip()
 else:
   raise SystemExit('ERROR: Checking input failed! Could not determine input type.')
-print "Processed", len(input_files), "files"
-print "  example file: ", input_files[0].strip()
+#print "Processed", len(input_files), "files"
+#print "  example file: ", input_files[0].strip()
+example_inputfile = str(input_files[0].strip())
+ex_in = example_inputfile
 
 # test input
 if args.input_cmslpc:
@@ -232,7 +234,8 @@ if args.output_cmslpc:
   os.system('rm blank.txt')
 
 # make job directory
-job_dir = 'Job_' + args.dir
+if args.test: job_dir = 'TestJob_' + args.dir
+else: job_dir = 'Job_' + args.dir
 if os.path.isdir("./"+job_dir) and not args.force:
   raise SystemExit("ERROR: Directory " + job_dir + " already exists. Use option -f to overwrite")
 if os.path.isdir("./"+job_dir) and args.force:
@@ -314,7 +317,7 @@ if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
 # define submit files
 sub = htcondor.Submit()
 sub['executable'] = helper_dir+'/'+executable
-sub['arguments'] = unpacker_filename + " " + stageout_filename + " $(Process) " + datamc
+sub['arguments'] = unpacker_filename + " " + stageout_filename + " $(Process) " + datamc + " " + args.year
 if args.lumiMask is None:
   sub['arguments'] += " None"
 else:
@@ -350,9 +353,8 @@ os.system('mv ' + submit_file_filename + ' ' + job_dir)
 os.system('cp ' + helper_dir +'/'+ executable + ' ' + job_dir)
 
 # check proxy
-if not args.test:
-  if site == 'cmslpc' and not args.nopass:
-    os.system('voms-proxy-init --valid 192:00 -voms cms')
+if site == 'cmslpc' and not args.test:
+  os.system('voms-proxy-init --valid 192:00 -voms cms')
 if site == 'hexcms' and args.input_dataset and args.proxy == '':
   raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-info and provide 'path' variable to --proxy")
 if site == 'hexcms' and args.input_dataset and not args.proxy == '':
@@ -372,29 +374,29 @@ if args.output_cmslpc: o_assume = 'cmslpc eos'
 if args.input_local: i_assume = 'local'
 if args.input_cmslpc: i_assume = 'cmslpc eos'
 if args.input_dataset: i_assume = 'official dataset'
-print ""
 print "Summary"
 print "-------"
 print "Job Directory       :", job_dir
+print "Job Specification   :", args.year +" "+datamc.upper()
 print "Total Jobs          :", str(TOTAL_JOBS)
 print "Total Files         :", str(num_total_files)
 print "Files/Job (approx)  :", str(N)
-print "Input               : " + i_assume +" ("+datamc+")"
+print "Input               : " + i_assume
+if len(input_files)>1: print "Example Input File  : " + ((ex_in[:88] + '..') if len(ex_in) > 90 else ex_in)
+else : print "Input File          : " + ((ex_in[:88] + '..') if len(ex_in) > 90 else ex_in)
 print "Output              : " + o_assume
 print "Output Directory    :", args.output
 if not args.lumiMask is None:
   print "Lumi Mask           : " + os.path.basename(args.lumiMask)
 print "Schedd              :", schedd_ad["Name"]
-print ""
-    
+
 # premature exit for test
 if args.test:
   print "Just a test, Exiting."
   sys.exit()
 
 # prompt user to double-check job summary
-print "Please check summary. [Enter] to proceed with submission, (q) to quit:"
-reponse = raw_input()
+reponse = raw_input("Please check summary. [Enter] to proceed with submission, (q) to quit: ")
 if reponse == 'q':
   print "Quitting."
   sys.exit()
