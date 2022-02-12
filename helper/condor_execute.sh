@@ -1,7 +1,11 @@
 #! /bin/bash
-export INITIAL_DIR=$(pwd)
+echo ">>> Starting job on" `date`
+echo ">>> Running on: `uname -a`"
+echo ">>> System software: `cat /etc/redhat-release`"
+echo ""
 echo "&&& Here there are all the input arguments &&&"
 echo $@
+export INITIAL_DIR=$(pwd)
 echo ''
 echo '&&& Current directiory and Contents: &&&'
 pwd
@@ -68,8 +72,8 @@ pwd
 ls -ldh *
 echo ''
 echo '&&& cmsRun cfg.py &&&'
-#echo cmsRun NANOAOD_$4_UL18_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$5
-cmsRun NANOAOD_$4_UL18_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$5
+#echo cmsRun NANOAOD_$4_UL18_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$6
+cmsRun NANOAOD_$4_$5_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$6
 echo ''
 ls -ldh *.root
 echo ''

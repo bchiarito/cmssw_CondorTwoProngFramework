@@ -32,4 +32,4 @@ while getopts ":b" option; do
    esac
 done
 NoRebuild
-rm -rf Job_unit_test_hexcms
+rm -rf TestJob_unit_test_hexcms
