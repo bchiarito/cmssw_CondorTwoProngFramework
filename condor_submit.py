@@ -336,7 +336,7 @@ sub['output'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['log'] = job_dir+'/log_$(Cluster).txt'
 
-# move copy of various files to job diretory 
+# copy files to job diretory 
 command = ''
 for a in sys.argv:
   command += a + ' '
@@ -345,6 +345,16 @@ with open(submit_file_filename, 'w') as f:
   f.write('\n# Command:\n#'+command)
 os.system('mv ' + submit_file_filename + ' ' + job_dir)
 os.system('cp ' + helper_dir +'/'+ executable + ' ' + job_dir)
+
+# check proxy
+if not args.test:
+  if site == 'cmslpc' and not args.nopass:
+    os.system('voms-proxy-init --valid 192:00 -voms cms')
+if site == 'hexcms' and args.input_dataset and args.proxy == '':
+  raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-info and provide 'path' variable to --proxy")
+if site == 'hexcms' and args.input_dataset and not args.proxy == '':
+  if not os.path.isfile(os.path.basename(args.proxy)):
+    os.system('cp '+args.proxy+' .')
 
 # get the schedd
 coll = htcondor.Collector()
@@ -373,21 +383,20 @@ if not args.lumiMask is None:
   print "Lumi Mask           : " + os.path.basename(args.lumiMask)
 print "Schedd              :", schedd_ad["Name"]
 print ""
-
-# check proxy
-if not args.test:
-  if site == 'cmslpc' and not args.nopass:
-    os.system('voms-proxy-init --valid 192:00 -voms cms')
-if site == 'hexcms' and args.input_dataset and args.proxy == '':
-  raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-info and provide 'path' variable to --proxy")
-if site == 'hexcms' and args.input_dataset and not args.proxy == '':
-  if not os.path.isfile(os.path.basename(args.proxy)):
-    os.system('cp '+args.proxy+' .')
     
-# premature exit, test
+# premature exit for test
 if args.test:
   print "Just a test, Exiting."
   sys.exit()
+
+# prompt user to double-check job summary
+print "Please check summary. [Enter] to proceed with submission, (q) to quit:"
+reponse = raw_input()
+if reponse == 'q':
+  print "Quitting."
+  sys.exit()
+else:
+  pass
 
 # submit the job
 print "Submitting Jobs ..."
