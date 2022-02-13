@@ -234,8 +234,11 @@ if args.output_cmslpc:
   os.system('rm blank.txt')
 
 # make job directory
-if args.test: job_dir = 'TestJob_' + args.dir
-else: job_dir = 'Job_' + args.dir
+if args.test:
+  job_dir = 'TestJob_' + args.dir
+  args.force = True
+else:
+  job_dir = 'Job_' + args.dir
 if os.path.isdir("./"+job_dir) and not args.force:
   raise SystemExit("ERROR: Directory " + job_dir + " already exists. Use option -f to overwrite")
 if os.path.isdir("./"+job_dir) and args.force:
