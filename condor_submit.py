@@ -11,6 +11,7 @@ import socket
 sys.path.append(os.path.join(sys.path[0],'include'))
 import dataset_management as dm
 from datetime import datetime
+from datetime import timedelta
 from datetime import date
 from itertools import izip_longest
 
@@ -361,13 +362,13 @@ os.system('mv ' + submit_file_filename + ' ' + job_dir)
 os.system('cp ' + helper_dir +'/'+ executable + ' ' + job_dir)
 
 # check proxy
-if site == 'cmslpc' and not args.test:
-  os.system('voms-proxy-init --valid 192:00 -voms cms')
 if site == 'hexcms' and args.input_dataset and args.proxy == '':
   raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-info and provide 'path' variable to --proxy")
 if site == 'hexcms' and args.input_dataset and not args.proxy == '':
   if not os.path.isfile(os.path.basename(args.proxy)):
     os.system('cp '+args.proxy+' .')
+if site == 'cmslpc':
+  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
 
 # get the schedd
 coll = htcondor.Collector()
@@ -397,6 +398,7 @@ print "Output Directory    :", output_path
 if not args.lumiMask is None:
   print "Lumi Mask           : " + os.path.basename(args.lumiMask)
 print "Schedd              :", schedd_ad["Name"]
+if site=='cmslpc': print "Grid Proxy          :", time_left + ' left'
 
 # premature exit for test
 if args.test:
