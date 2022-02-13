@@ -10,6 +10,7 @@ import time
 import socket
 sys.path.append(os.path.join(sys.path[0],'include'))
 import dataset_management as dm
+from datetime import datetime
 from datetime import date
 from itertools import izip_longest
 
@@ -213,23 +214,27 @@ elif args.output_local == False and args.output_cmslpc == False:
   output_not_set = True
 if output_not_set and site == "hexcms": args.output_local = True
 if output_not_set and site == "cmslpc": args.output_cmslpc = True
+
+# create output area
+base = args.output
+if base[-1] == '/': base = base[:-1]
+timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
+output_path = base+'/'+timestamp
 if args.output_local:
   if site == "cmslpc": raise SystemExit('ERROR: Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
-  if not os.path.isdir(args.output):
-    #print "\nMaking output directory, because it does not already exist ..."
-    ret = os.system('mkdir -p ' + args.output)
+  if not os.path.isdir(output_path):
+    ret = os.system('mkdir -p ' + output_path)
     if not ret == 0: raise SystemExit('ERROR: Failed to create job output directory!')
-if site == "cmslpc" and args.output_cmslpc:
-  #print "Ensuring output eos location exists ..."
-  ret = os.system("eos root://cmseos.fnal.gov mkdir -p " + args.output)
+if args.output_cmslpc:
+  ret = os.system("eos root://cmseos.fnal.gov mkdir -p " + output_path)
   if not ret == 0: raise SystemExit('ERROR: Failed to create job output directory in cmslpc eos area!')
 
 # test output
 if args.output_cmslpc:
   os.system('touch blank.txt')
-  ret = os.system('xrdcp --nopbar blank.txt root://cmseos.fnal.gov/' + args.output)
+  ret = os.system('xrdcp --nopbar blank.txt root://cmseos.fnal.gov/' + output_path)
   if not ret == 0: raise SystemExit('ERROR: Failed to xrdcp test file into output eos area!')
-  ret = os.system("eos root://cmseos.fnal.gov rm " + args.output + "/blank.txt &> /dev/null")
+  ret = os.system("eos root://cmseos.fnal.gov rm " + output_path + "/blank.txt &> /dev/null")
   if not ret == 0: raise SystemExit('ERROR: Failed eosrm test file from output eos area!')
   os.system('rm blank.txt')
 
@@ -299,7 +304,7 @@ template_filename = helper_dir+"/template_"+stageout_filename
 replaced_filename = stageout_filename
 to_replace = {}
 to_replace['__finalfile__'] = finalfile_filename
-to_replace['__outputlocation__'] = args.output
+to_replace['__outputlocation__'] = output_path
 if args.output_local:
   to_replace['__redirector__'] = ''
   to_replace['__copycommand__'] = 'cp'
@@ -388,7 +393,7 @@ print "Input               : " + i_assume
 if len(input_files)>1: print "Example Input File  : " + ((ex_in[:88] + '..') if len(ex_in) > 90 else ex_in)
 else : print "Input File          : " + ((ex_in[:88] + '..') if len(ex_in) > 90 else ex_in)
 print "Output              : " + o_assume
-print "Output Directory    :", args.output
+print "Output Directory    :", output_path
 if not args.lumiMask is None:
   print "Lumi Mask           : " + os.path.basename(args.lumiMask)
 print "Schedd              :", schedd_ad["Name"]
@@ -399,13 +404,14 @@ if args.test:
   sys.exit()
 
 # prompt user to double-check job summary
-reponse = raw_input("Please check summary. [Enter] to proceed with submission, (q) to quit: ")
-if reponse == 'q':
-  print "Quitting."
-  os.system('rm -rf '+job_dir)
-  sys.exit()
-else:
-  pass
+while True:
+  response = raw_input("Please check summary. [Enter] to proceed with submission, q to quit: ")
+  if response == 'q':
+    print "Quitting."
+    os.system('rm -rf '+job_dir)
+    sys.exit()
+  elif response == '': break
+  else: pass
 
 # submit the job
 print "Submitting Jobs ..."
@@ -420,6 +426,6 @@ to_replace = {}
 to_replace['__cluster__'] = str(cluster_id)
 to_replace['__queue__'] = str(TOTAL_JOBS)
 to_replace['__schedd__'] = schedd_ad["Name"]
-to_replace['__output__'] = args.output
+to_replace['__output__'] = output_path
 use_template_to_replace(template_filename, replaced_filename, to_replace)
 os.system('mv ' + replaced_filename + ' ' + job_dir)
