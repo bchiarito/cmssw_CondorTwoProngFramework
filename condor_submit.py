@@ -399,6 +399,7 @@ if args.test:
 reponse = raw_input("Please check summary. [Enter] to proceed with submission, (q) to quit: ")
 if reponse == 'q':
   print "Quitting."
+  os.system('rm -rf '+job_dir)
   sys.exit()
 else:
   pass
