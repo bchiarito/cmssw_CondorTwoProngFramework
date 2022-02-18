@@ -21,7 +21,7 @@ UnitTest()
 Rebuild()
 {
   echo "Got -b option: Rebuild"
-  ./for_submit/cmssw_src_setup.sh
+  ./helper/cmssw_src_setup.sh
   UnitTest
 }
 NoRebuild()
@@ -34,8 +34,9 @@ while getopts ":b" option; do
    case $option in
       b) # Rebuild scratch area
          Rebuild
+         rm -rf TestJob_unit_test_cmslpc/
          exit;;
    esac
 done
 NoRebuild
-rm -rf TestJob_unit_test_cmslpc
+rm -rf TestJob_unit_test_cmslpc/
