@@ -219,7 +219,7 @@ if output_not_set and site == "cmslpc": args.output_cmslpc = True
 # create output area
 base = args.output
 if base[-1] == '/': base = base[:-1]
-timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
+timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
 output_path = base+'/'+timestamp
 if args.output_local:
   if site == "cmslpc": raise SystemExit('ERROR: Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
@@ -296,7 +296,7 @@ if args.input_cmslpc:
 if args.input_dataset:
   to_replace['__redirector__'] = 'root://cmsxrootd.fnal.gov/'
   if args.useLFN: to_replace['__copycommand__'] = 'NULL'
-  else: to_replace['__copycommand__'] = 'xrdcp --nopbar'
+  else: to_replace['__copycommand__'] = 'xrdcp --debug 1 --retry 3 --nopbar'
 use_template_to_replace(template_filename, replaced_filename, to_replace)
 os.system('mv ' + replaced_filename + ' ' + job_dir)
 
@@ -346,7 +346,11 @@ sub['transfer_input_files'] = \
 if not args.lumiMask is None:
   sub['transfer_input_files'] += ", "+args.lumiMask
 sub['transfer_output_files'] = '""'
+sub['on_exit_hold'] = '(ExitBySignal == True) || (ExitCode != 0)'
+sub['on_exit_hold_reason'] = '"on_exit_hold: Job Terminated with ExitCode != 0"'
+sub['periodic_release'] = '(NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)'
 sub['initialdir'] = ''
+sub['JobBatchName'] = args.dir
 sub['output'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['log'] = job_dir+'/log_$(Cluster).txt'
