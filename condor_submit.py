@@ -97,6 +97,8 @@ help="path to lumi mask json file")
 # meta-run specification
 parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
 help="name of job directory, created in current directory")
+parser.add_argument("--batch",
+help="JobBatchName parameter, displays when using condor_q -batch")
 parser.add_argument("-n", "--num", default=1, type=int, metavar='INT',
 help="number of subjobs in the job (default is 1)")
 parser.add_argument("--files", default=-1, type=int, metavar='maxFiles',
@@ -346,11 +348,9 @@ sub['transfer_input_files'] = \
 if not args.lumiMask is None:
   sub['transfer_input_files'] += ", "+args.lumiMask
 sub['transfer_output_files'] = '""'
-sub['on_exit_hold'] = '(ExitBySignal == True) || (ExitCode != 0)'
-sub['on_exit_hold_reason'] = '"on_exit_hold: Job Terminated with ExitCode != 0"'
-sub['periodic_release'] = '(NumJobStarts < 3) && ((CurrentTime - EnteredCurrentStatus) > 600)'
+sub['on_exit_remove'] = '((ExitBySignal == False) && (ExitCode == 0)) || (NumJobStarts >= 3)'
 sub['initialdir'] = ''
-sub['JobBatchName'] = args.dir
+sub['JobBatchName'] = args.dir if args.batch is None else args.batch
 sub['output'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['log'] = job_dir+'/log_$(Cluster).txt'
