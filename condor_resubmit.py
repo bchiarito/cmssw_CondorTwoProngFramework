@@ -13,11 +13,14 @@ import htcondor
 
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("jobDir",help="the condor_submit.py job directory")
+parser.add_argument("procs",help="Process numbers to resubmit, e.g.: 1-3,5,6,7")
+parser.add_argument("--batch",help="JobBatchName parameter, displays when using condor_q -batch")
 parser.add_argument("-v", "--verbose", default=False, action="store_true",help="turn on debug messages")
 args = parser.parse_args()
 
 # constants
 json_filename = 'temp.json'
+submit_filename = 'submit_file.jdl'
 
 # import job
 if args.verbose: print "DEBUG: Import job"
@@ -40,148 +43,54 @@ for s in schedd_query:
 schedd = htcondor.Schedd(schedd_ad)
 if args.verbose: print "DEBUG:", schedd
 
-# discover subjob jobNums
-subjobs = {}
+# make list of procs to resubmit
+procs = []
+for a, b in re.findall(r'(\d+)-?(\d*)', args.procs):
+  procs.extend(range(int(a), int(a)+1 if b=='' else int(b)+1))
+procs_string = ''
+for p in procs:
+ procs_string += str(p)+','
+procs_string = procs_string[:-1]
+#print procs
+#print procs_string
+
+# create new submit jdl
+batchName = "resub_for_"+job.cluster if args.batch is None else args.batch
+with open(args.jobDir+'/'+submit_filename) as f:
+  submit_string = f.read()
+  #submit_string = submit_string.replace('log_'+job.cluster+'.txt', 'log_'+args.proc+'_'+cluster+'.txt')
+  submit_string += "\nJobBatchName = " + batchName
+  submit_string += '\nnoop_job = !stringListMember("$(Process)","'+procs_string+'")'
+  #print submit_string
+
+# make submit object
+sub = htcondor.Submit(submit_string)
+
+# check
+#i = raw_input()
+#if i == 'q': sys.exit()
+
+# move/delete old output
 for proc in procs:
-  subjob = {}
-  subjobs[proc] = subjob
-
-# show possible jdl
-with open(args.jobDir+'/submit_file.jdl') as f:
-  for line in f:
-    print line.strip()
-
-sys.exit()
-
-
-
-
-# discover output files
-if args.verbose: print "DEBUG: Discover output files"
-if output_eos:
-  if args.verbose: print "DEBUG: command", 'eos root://cmseos.fnal.gov ls -lh '+output_area
-  output = subprocess.check_output('eos root://cmseos.fnal.gov ls -lh '+output_area, shell=True)
-else: # local
-  if args.verbose: print "DEBUG: command", 'ls -lh '+output_area
-  output = subprocess.check_output('ls -lh '+output_area, shell=True) 
-for line in output.split('\n'):
-  #print len(line.split())
-  #for item in line.split():
-  #  print "  ", item
-  if len(line.split()) <= 2: continue
+  base = 'NANOAOD_TwoProng_'
+  jobid = str(proc)
+  file_to_remove = base + jobid + '.root'
+  if output_eos:
+    rm_command = 'eos root://cmseos.fnal.gov rm ' + output_area + '/' + file_to_remove + ' 2> /dev/null'
+  else: # local
+    rm_command = 'rm -f ' + output_area + '/' + file_to_remove + ' 2> /dev/null'
+  if args.verbose: print "DEBUG: remove command ", rm_command
   try:
-    l = line.split()
-    fi = l[len(l)-1]
-    if output_eos: size = l[4]+' '+l[5]
-    else:
-      temp = l[4]
-      size = temp[0:len(temp)-1]+' '+temp[len(temp)-1]
-    u = fi.rfind('_')
-    d = fi.rfind('.')
-    job = int(fi[u+1:d])
-    subjobs[job]['size'] = size
-  except (IndexError, ValueError):
-    print "WARNING: got IndexError or ValueError, may want to check output area directly with (eos) ls."
-    continue
+    output = subprocess.check_output(rm_command, shell=True)
+  except Exception:
+    pass
 
-# parse json job report
-if args.verbose: print "DEBUG: parse job report file, creating with condor_wait ..."
-#regex = r"\{(.*?)\}"
-regex = r"\{[^{}]*?(\{.*?\})?[^{}]*?\}"
-os.system('condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+cluster+'.txt > '+json_filename)
-if args.verbose: print "DEBUG: job report file created"
-with open(json_filename, 'r') as f:
-  matches = re.finditer(regex, f.read(), re.MULTILINE | re.DOTALL)
-  for match in matches:
-    #print "next block:"
-    #print match.group(0)
-    block = json.loads(match.group(0))
-    date = time.strptime(str(block['EventTime']), '%Y-%m-%dT%H:%M:%S')
-    t = timegm(date)
-    if block['MyType'] == 'SubmitEvent':
-      subjobs[int(block['Proc'])]['start_time'] = date
-      subjobs[int(block['Proc'])]['status'] = 'submitted'
-    if block['MyType'] == 'ExecuteEvent':
-      subjobs[int(block['Proc'])]['start_time'] = date
-      subjobs[int(block['Proc'])]['status'] = 'running'
-    if block['MyType'] == 'JobTerminatedEvent':
-      subjobs[int(block['Proc'])]['end_time'] = date
-      if block['TerminatedNormally']:
-        subjobs[int(block['Proc'])]['status'] = 'finished'
-      else:
-        subjobs[int(block['Proc'])]['status'] = 'failed'
-    if block['MyType'] == 'JobAbortedEvent':
-      subjobs[int(block['Proc'])]['end_time'] = date
-      subjobs[int(block['Proc'])]['reason'] = block['Reason']
-      subjobs[int(block['Proc'])]['status'] = 'aborted'
-    if block['MyType'] == 'JobHeldEvent':
-      subjobs[int(block['Proc'])]['end_time'] = date
-      subjobs[int(block['Proc'])]['reason'] = block['HoldReason']    
-      subjobs[int(block['Proc'])]['status'] = 'held'
-      
-if args.verbose: print "DEBUG: Directory so far"
-for num in subjobs:
-  if args.verbose: print "subjob", num
-  subjob = subjobs[num]
-  for item in subjob:
-    if args.verbose: print "  ", item, "=", subjob[item]
-if args.verbose: print ""
+# submit the job
+if args.verbose: print "DEBUG: Submitting Jobs"
+with schedd.transaction() as txn:
+  cluster_id = sub.queue(txn, count=int(job.queue))
+  print "ClusterId: ", cluster_id
 
-# Print Status
-print "Results for ClusterId", cluster, "at schedd", schedd_name
-print "Job output area:", output_area
-if not args.summary: print ' {:<5}| {:<15}| {:<21}| {:<20}| {}'.format(
-       'Proc', 'Status', 'Run Time', 'Output File Size', 'Msg'
-)
-if args.summary: summary = {}
-for jobNum in subjobs:
-  subjob = subjobs[jobNum]
-  status = subjob.get('status','')
-  reason = subjob.get('reason','')
-  reason = reason[0:80]
-  if 'start_time' in subjob and 'end_time' in subjob:
-    totalTime = str(datetime.timedelta(seconds = timegm(subjob['end_time']) - timegm(subjob['start_time'])))
-  elif 'start_time' in subjob:
-    totalTime = str(datetime.timedelta(seconds = timegm(time.localtime()) - timegm(subjob['start_time'])))
-  elif 'end_time' in subjob:
-    totalTime = time.strftime('%m/%d %H:%M:%S', subjob['end_time']) + " (end)"
-  else:
-    totalTime = ''
-  size = subjob.get('size', "")
-  if status=='finished' and size=='': status = 'fin w/o output'
-  if args.onlyFinished and (status=='submitted' or status=='running'): continue
-  if not args.summary: print ' {:<5}| {:<15}| {:<21}| {:<20}| {}'.format(
-         str(jobNum), str(status), str(totalTime), str(size), str(reason)
-  )
-  if args.summary:
-    if status in summary: summary[status] += 1
-    else: summary[status] = 1
-if args.summary:
-  total = 0
-  for key in summary:
-    total += summary[key]
-  print '{:<15} | {}'.format('Status', 'Job Ids ({} total)'.format(total))
-  for status in summary:
-    print '{:<15} | {}'.format(str(status), str(summary[status]))
-
-# Cleanup
-os.system('rm '+json_filename)
-
-# print current jobs
-#ads = schedd.query(
-#  constraint='ClusterId =?= {}'.format(cluster),
-#  projection=["ClusterId", "ProcId", "JobStatus"],
-#)
-#print "CURRENT JOBS"
-#for ad in ads:
-#  print ad['ClusterId'], ad['ProcID'], ad['JobStatus']
-
-# print past jobs
-#ads = schedd.history(
-#  constraint='ClusterId =?= {}'.format(cluster),
-#  projection=["ClusterId", "ProcId", "JobStatus"],
-#  match=10
-#)
-#print "PAST JOBS"
-#for ad in ads:
-#  print ad['ClusterId'], ad['ProcID'], ad['JobStatus']
+# update job_info.py
+with open(args.jobDir+'/job_info.py', 'a') as f:
+  f.write("\nresubmits.append('"+str(cluster_id)+"')\n")

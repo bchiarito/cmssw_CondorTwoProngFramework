@@ -70,8 +70,8 @@ for line in output.split('\n'):
       size = temp[0:len(temp)-1]+' '+temp[len(temp)-1]
     u = fi.rfind('_')
     d = fi.rfind('.')
-    job = int(fi[u+1:d])
-    subjobs[job]['size'] = size
+    proc = int(fi[u+1:d])
+    subjobs[proc]['size'] = size
   except (IndexError, ValueError):
     print "WARNING: got IndexError or ValueError, may want to check output area directly with (eos) ls."
     continue
@@ -94,8 +94,9 @@ with open(json_filename, 'r') as f:
       subjobs[int(block['Proc'])]['start_time'] = date
       subjobs[int(block['Proc'])]['status'] = 'submitted'
     if block['MyType'] == 'ExecuteEvent':
-      subjobs[int(block['Proc'])]['start_time'] = date
       subjobs[int(block['Proc'])]['status'] = 'running'
+    if block['MyType'] == 'JobReleaseEvent':
+      subjobs[int(block['Proc'])]['status'] = 'rereleased'
     if block['MyType'] == 'JobTerminatedEvent':
       subjobs[int(block['Proc'])]['end_time'] = date
       if block['TerminatedNormally']:
@@ -119,11 +120,60 @@ for num in subjobs:
     if args.verbose: print "  ", item, "=", subjob[item]
 if args.verbose: print ""
 
+# process resubmits
+resubmits = 0
+for resubmit_cluster in job.resubmits:
+  if args.verbose: print "DEBUG: found resubmit clusterid:", resubmit_cluster
+  regex = r"\{[^{}]*?(\{.*?\})?[^{}]*?\}"
+  os.system('condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+resubmit_cluster+'.txt > '+json_filename)
+  if args.verbose: print "DEBUG: job report file created"
+  resubmits += 1
+  with open(json_filename, 'r') as f:
+    matches = re.finditer(regex, f.read(), re.MULTILINE | re.DOTALL)
+    for match in matches:
+      #print "next block:"
+      #print match.group(0)
+      block = json.loads(match.group(0))
+      date = time.strptime(str(block['EventTime']), '%Y-%m-%dT%H:%M:%S')
+      t = timegm(date)
+      if block['MyType'] == 'SubmitEvent':
+        subjobs[int(block['Proc'])]['resubmitted'] = 0
+      if block['MyType'] == 'ExecuteEvent':
+        subjobs[int(block['Proc'])]['resubmitted'] += 1
+        subjobs[int(block['Proc'])]['start_time'] = date
+        del subjobs[int(block['Proc'])]['end_time']
+        subjobs[int(block['Proc'])]['reason'] = ''
+        subjobs[int(block['Proc'])]['status'] = 'running'
+      if subjobs[int(block['Proc'])].get('resubmitted',0) < resubmits: continue
+      if block['MyType'] == 'JobHeldEvent':
+        subjobs[int(block['Proc'])]['end_time'] = date
+        subjobs[int(block['Proc'])]['reason'] = block['HoldReason']
+        subjobs[int(block['Proc'])]['status'] = 'held'
+      if block['MyType'] == 'JobReleaseEvent':
+        subjobs[int(block['Proc'])]['status'] = 'released'
+      if block['MyType'] == 'JobTerminatedEvent':
+        if block['TotalReceivedBytes'] == 0.0: continue
+        subjobs[int(block['Proc'])]['end_time'] = date
+        if block['TerminatedNormally']: subjobs[int(block['Proc'])]['status'] = 'finished'
+        else: subjobs[int(block['Proc'])]['status'] = 'failed'
+      if block['MyType'] == 'JobAbortedEvent':
+        subjobs[int(block['Proc'])]['end_time'] = date
+        subjobs[int(block['Proc'])]['reason'] = block['Reason']
+        subjobs[int(block['Proc'])]['status'] = 'aborted'
+  # closed file
+  if args.verbose: print "DEBUG: Directory so far"
+  for num in subjobs:
+    if args.verbose: print "subjob", num
+    subjob = subjobs[num]
+    for item in subjob:
+      if args.verbose: print "  ", item, "=", subjob[item]
+  if args.verbose: print ""
+
 # Print Status
 print "Results for ClusterId", cluster, "at schedd", schedd_name
 print "Job output area:", output_area
-if not args.summary: print ' {:<5}| {:<15}| {:<21}| {:<20}| {}'.format(
-       'Proc', 'Status', 'Run Time', 'Output File Size', 'Msg'
+if not args.summary: print ' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
+       'Proc', 'Status', 'Resubs', 'Wall Time', 'Output File', 'Msg'
 )
 if args.summary: summary = {}
 for jobNum in subjobs:
@@ -142,8 +192,10 @@ for jobNum in subjobs:
   size = subjob.get('size', "")
   if status=='finished' and size=='': status = 'fin w/o output'
   if args.onlyFinished and (status=='submitted' or status=='running'): continue
-  if not args.summary: print ' {:<5}| {:<15}| {:<21}| {:<20}| {}'.format(
-         str(jobNum), str(status), str(totalTime), str(size), str(reason)
+  resubs = subjob.get('resubmitted', '')
+  if resubs == 0: resubs = ''
+  if not args.summary: print ' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
+         str(jobNum), str(status), str(resubs), str(totalTime), str(size), str(reason)
   )
   if args.summary:
     if status in summary: summary[status] += 1
@@ -158,22 +210,3 @@ if args.summary:
 
 # Cleanup
 os.system('rm '+json_filename)
-
-# print current jobs
-#ads = schedd.query(
-#  constraint='ClusterId =?= {}'.format(cluster),
-#  projection=["ClusterId", "ProcId", "JobStatus"],
-#)
-#print "CURRENT JOBS"
-#for ad in ads:
-#  print ad['ClusterId'], ad['ProcID'], ad['JobStatus']
-
-# print past jobs
-#ads = schedd.history(
-#  constraint='ClusterId =?= {}'.format(cluster),
-#  projection=["ClusterId", "ProcId", "JobStatus"],
-#  match=10
-#)
-#print "PAST JOBS"
-#for ad in ads:
-#  print ad['ClusterId'], ad['ProcID'], ad['JobStatus']
