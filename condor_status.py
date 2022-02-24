@@ -95,10 +95,12 @@ if True:
     date = time.strptime(str(block['EventTime']), '%Y-%m-%dT%H:%M:%S')
     t = timegm(date)
     if block['MyType'] == 'SubmitEvent':
+      subjobs[int(block['Proc'])]['resubmitted'] = 0
       subjobs[int(block['Proc'])]['start_time'] = date
       subjobs[int(block['Proc'])]['status'] = 'submitted'
     if block['MyType'] == 'ExecuteEvent':
       subjobs[int(block['Proc'])]['status'] = 'running'
+      subjobs[int(block['Proc'])]['reason'] = ''
     if block['MyType'] == 'JobReleaseEvent':
       subjobs[int(block['Proc'])]['status'] = 'rereleased'
     if block['MyType'] == 'JobTerminatedEvent':
@@ -126,7 +128,7 @@ if args.verbose: print ""
 
 # process resubmits
 resubmits = 0
-for resubmit_cluster in job.resubmits:
+for resubmit_cluster,procs in job.resubmits:
   if args.verbose: print "DEBUG: found resubmit clusterid:", resubmit_cluster
   regex = r"\{[^{}]*?(\{.*?\})?[^{}]*?\}"
   #os.system('condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+resubmit_cluster+'.txt > '+json_filename)
@@ -143,15 +145,16 @@ for resubmit_cluster in job.resubmits:
       block = json.loads(match.group(0))
       date = time.strptime(str(block['EventTime']), '%Y-%m-%dT%H:%M:%S')
       t = timegm(date)
+      # skip noop_jobs
+      if not int(block['Proc']) in procs: continue
       if block['MyType'] == 'SubmitEvent':
-        subjobs[int(block['Proc'])]['resubmitted'] = 0
-      if block['MyType'] == 'ExecuteEvent':
         subjobs[int(block['Proc'])]['resubmitted'] += 1
         subjobs[int(block['Proc'])]['start_time'] = date
-        del subjobs[int(block['Proc'])]['end_time']
+        subjobs[int(block['Proc'])].pop('end_time', None)
         subjobs[int(block['Proc'])]['reason'] = ''
+      if block['MyType'] == 'ExecuteEvent':
         subjobs[int(block['Proc'])]['status'] = 'running'
-      if subjobs[int(block['Proc'])].get('resubmitted',0) < resubmits: continue
+        subjobs[int(block['Proc'])]['reason'] = ''
       if block['MyType'] == 'JobHeldEvent':
         subjobs[int(block['Proc'])]['end_time'] = date
         subjobs[int(block['Proc'])]['reason'] = block['HoldReason']
