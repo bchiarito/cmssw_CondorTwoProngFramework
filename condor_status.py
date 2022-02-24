@@ -80,10 +80,14 @@ for line in output.split('\n'):
 if args.verbose: print "DEBUG: parse job report file, creating with condor_wait ..."
 #regex = r"\{(.*?)\}"
 regex = r"\{[^{}]*?(\{.*?\})?[^{}]*?\}"
-os.system('condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+cluster+'.txt > '+json_filename)
+#os.system('condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+cluster+'.txt > '+json_filename)
+wait_command = 'condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+cluster+'.txt'
+output = subprocess.check_output(wait_command, shell=True)
 if args.verbose: print "DEBUG: job report file created"
-with open(json_filename, 'r') as f:
-  matches = re.finditer(regex, f.read(), re.MULTILINE | re.DOTALL)
+#with open(json_filename, 'r') as f:
+if True:
+  #matches = re.finditer(regex, f.read(), re.MULTILINE | re.DOTALL)
+  matches = re.finditer(regex, output, re.MULTILINE | re.DOTALL)
   for match in matches:
     #print "next block:"
     #print match.group(0)
@@ -125,11 +129,14 @@ resubmits = 0
 for resubmit_cluster in job.resubmits:
   if args.verbose: print "DEBUG: found resubmit clusterid:", resubmit_cluster
   regex = r"\{[^{}]*?(\{.*?\})?[^{}]*?\}"
-  os.system('condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+resubmit_cluster+'.txt > '+json_filename)
+  #os.system('condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+resubmit_cluster+'.txt > '+json_filename)
+  wait_command = 'condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+resubmit_cluster+'.txt'
+  output = subprocess.check_output(wait_command, shell=True)
   if args.verbose: print "DEBUG: job report file created"
   resubmits += 1
-  with open(json_filename, 'r') as f:
-    matches = re.finditer(regex, f.read(), re.MULTILINE | re.DOTALL)
+  #with open(json_filename, 'r') as f:
+  if True:
+    matches = re.finditer(regex, output, re.MULTILINE | re.DOTALL)
     for match in matches:
       #print "next block:"
       #print match.group(0)
@@ -209,4 +216,4 @@ if args.summary:
     print '{:<15} | {}'.format(str(status), str(summary[status]))
 
 # Cleanup
-os.system('rm '+json_filename)
+#os.system('rm '+json_filename)
