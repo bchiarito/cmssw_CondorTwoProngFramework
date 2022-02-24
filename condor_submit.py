@@ -97,8 +97,8 @@ help="path to lumi mask json file")
 # meta-run specification
 parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
 help="name of job directory, created in current directory")
-parser.add_argument("--batch",
-help="JobBatchName parameter, displays when using condor_q -batch")
+parser.add_argument("--batch", metavar='JobBatchName'
+help="displays when using condor_q -batch")
 parser.add_argument("-n", "--num", default=1, type=int, metavar='INT',
 help="number of subjobs in the job (default is 1)")
 parser.add_argument("--files", default=-1, type=int, metavar='maxFiles',
