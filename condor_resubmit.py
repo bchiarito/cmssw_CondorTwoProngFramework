@@ -93,4 +93,4 @@ with schedd.transaction() as txn:
 
 # update job_info.py
 with open(args.jobDir+'/job_info.py', 'a') as f:
-  f.write("\nresubmits.append(('"+str(cluster_id)+"',["+procs_string+"])\n)")
+  f.write("resubmits.append(('"+str(cluster_id)+"',["+procs_string+"]))\n")

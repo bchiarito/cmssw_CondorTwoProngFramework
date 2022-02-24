@@ -109,6 +109,10 @@ if True:
         subjobs[int(block['Proc'])]['status'] = 'finished'
       else:
         subjobs[int(block['Proc'])]['status'] = 'failed'
+    if block['MyType'] == 'ShadowExceptionEvent':
+      subjobs[int(block['Proc'])]['end_time'] = date
+      subjobs[int(block['Proc'])]['status'] = 'exception!'
+      subjobs[int(block['Proc'])]['reason'] = block['Message']
     if block['MyType'] == 'JobAbortedEvent':
       subjobs[int(block['Proc'])]['end_time'] = date
       subjobs[int(block['Proc'])]['reason'] = block['Reason']
@@ -166,6 +170,10 @@ for resubmit_cluster,procs in job.resubmits:
         subjobs[int(block['Proc'])]['end_time'] = date
         if block['TerminatedNormally']: subjobs[int(block['Proc'])]['status'] = 'finished'
         else: subjobs[int(block['Proc'])]['status'] = 'failed'
+      if block['MyType'] == 'ShadowExceptionEvent':
+        subjobs[int(block['Proc'])]['end_time'] = date
+        subjobs[int(block['Proc'])]['status'] = 'exception!'
+        subjobs[int(block['Proc'])]['reason'] = block['Message']
       if block['MyType'] == 'JobAbortedEvent':
         subjobs[int(block['Proc'])]['end_time'] = date
         subjobs[int(block['Proc'])]['reason'] = block['Reason']
