@@ -97,7 +97,7 @@ help="path to lumi mask json file")
 # meta-run specification
 parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
 help="name of job directory, created in current directory")
-parser.add_argument("--batch", metavar='JobBatchName',
+parser.add_argument("-b", "--batch", metavar='JobBatchName',
 help="displays when using condor_q -batch")
 parser.add_argument("-n", "--num", default=1, type=int, metavar='INT',
 help="number of subjobs in the job (default is 1)")
@@ -111,7 +111,7 @@ help="location of proxy file, only used on hexcms")
 # convenience
 parser.add_argument("-f", "--force", action="store_true",
 help="overwrite job directory if it already exists")
-parser.add_argument("-b", "--rebuild", default=False, action="store_true",
+parser.add_argument("--rebuild", default=False, action="store_true",
 help="remake cmssw prebuild area needed to ship with job")
 parser.add_argument("-t", "--test", default=False, action="store_true",
 help="don't submit condor jobs but do all other steps")
@@ -390,6 +390,7 @@ if args.input_dataset: i_assume = 'official dataset'
 print "Summary"
 print "-------"
 print "Job Directory       :", job_dir
+print "Job Batch Name      :", args.dir if args.batch is None else args.batch
 print "Job Specification   :", args.year +" "+datamc.upper()
 print "Total Jobs          :", str(TOTAL_JOBS)
 print "Total Files         :", str(num_total_files)
