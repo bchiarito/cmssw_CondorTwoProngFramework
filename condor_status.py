@@ -16,6 +16,8 @@ parser.add_argument("jobDir",help="the condor_submit.py job directory")
 parser.add_argument("-v", "--verbose", default=False, action="store_true",help="turn on debug messages")
 parser.add_argument("-s", "--summary", default=False, action="store_true",help="do not print one line per job, instead summarize number of jobs with each status type")
 parser.add_argument("--onlyFinished", default=False, action="store_true",help="ignore 'running' and 'submitted' job Ids")
+parser.add_argument("--notFinished", default=False, action="store_true",help="ignore 'finished' job Ids")
+parser.add_argument("--onlyError", default=False, action="store_true",help="ignore 'running', 'submitted', and 'finished, job Ids")
 args = parser.parse_args()
 
 # constants
@@ -210,6 +212,8 @@ for jobNum in subjobs:
   size = subjob.get('size', "")
   if status=='finished' and size=='': status = 'fin w/o output'
   if args.onlyFinished and (status=='submitted' or status=='running'): continue
+  if args.onlyError and (status=='submitted' or status=='running' or status=='finished'): continue
+  if args.notFinished and (status=='finished'): continue
   resubs = subjob.get('resubmitted', '')
   if resubs == 0: resubs = ''
   if not args.summary: print ' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
