@@ -84,12 +84,15 @@ if args.verbose: print "DEBUG: parse job report file, creating with condor_wait 
 regex = r"\{[^{}]*?(\{.*?\})?[^{}]*?\}"
 #os.system('condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+cluster+'.txt > '+json_filename)
 wait_command = 'condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+cluster+'.txt'
-output = subprocess.check_output(wait_command, shell=True)
+try:
+  wait_output = subprocess.check_output(wait_command, shell=True)
+except subprocess.CalledProcessError as e:
+  wait_output = e.output
 if args.verbose: print "DEBUG: job report file created"
 #with open(json_filename, 'r') as f:
 if True:
   #matches = re.finditer(regex, f.read(), re.MULTILINE | re.DOTALL)
-  matches = re.finditer(regex, output, re.MULTILINE | re.DOTALL)
+  matches = re.finditer(regex, wait_output, re.MULTILINE | re.DOTALL)
   for match in matches:
     #print "next block:"
     #print match.group(0)
@@ -115,6 +118,9 @@ if True:
       subjobs[int(block['Proc'])]['end_time'] = date
       subjobs[int(block['Proc'])]['status'] = 'exception!'
       subjobs[int(block['Proc'])]['reason'] = block['Message']
+    if block['MyType'] == 'FileTransferEvent' and block['Type'] == 6:
+      subjobs[int(block['Proc'])]['end_time'] = date
+      subjobs[int(block['Proc'])]['status'] = 'transferred'
     if block['MyType'] == 'JobAbortedEvent':
       subjobs[int(block['Proc'])]['end_time'] = date
       subjobs[int(block['Proc'])]['reason'] = block['Reason']
@@ -172,6 +178,9 @@ for resubmit_cluster,procs in job.resubmits:
         subjobs[int(block['Proc'])]['end_time'] = date
         if block['TerminatedNormally']: subjobs[int(block['Proc'])]['status'] = 'finished'
         else: subjobs[int(block['Proc'])]['status'] = 'failed'
+      if block['MyType'] == 'FileTransferEvent' and block['Type'] == 6:
+        subjobs[int(block['Proc'])]['end_time'] = date
+        subjobs[int(block['Proc'])]['status'] = 'transferred'
       if block['MyType'] == 'ShadowExceptionEvent':
         subjobs[int(block['Proc'])]['end_time'] = date
         subjobs[int(block['Proc'])]['status'] = 'exception!'
