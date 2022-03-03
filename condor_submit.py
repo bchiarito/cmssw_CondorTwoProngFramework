@@ -103,6 +103,8 @@ parser.add_argument("-n", "--num", default=1, type=int, metavar='INT',
 help="number of subjobs in the job (default is 1)")
 parser.add_argument("--files", default=-1, type=int, metavar='maxFiles',
 help="maximum number of files to include from input area (default is -1, meaning all files)")
+parser.add_argument("--noErr", default=False, action="store_true",
+help="do not save stderr in log files")
 parser.add_argument("--useLFN", default=False, action="store_true",
 help="when running on dataset do not use xrdcp, instead supply LFN directly to cmssw config")
 parser.add_argument("--proxy", default='',
@@ -352,7 +354,10 @@ sub['on_exit_remove'] = '((ExitBySignal == False) && (ExitCode == 0)) || (NumJob
 sub['initialdir'] = ''
 sub['JobBatchName'] = args.dir if args.batch is None else args.batch
 sub['output'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
-sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
+if args.noErr:
+  sub['error'] = '/dev/null'
+else:
+  sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['log'] = job_dir+'/log_$(Cluster).txt'
 
 # copy files to job diretory 
