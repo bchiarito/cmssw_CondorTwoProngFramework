@@ -97,10 +97,14 @@ help="path to lumi mask json file")
 # meta-run specification
 parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
 help="name of job directory, created in current directory")
+parser.add_argument("-b", "--batch", metavar='JobBatchName',
+help="displays when using condor_q -batch")
 parser.add_argument("-n", "--num", default=1, type=int, metavar='INT',
 help="number of subjobs in the job (default is 1)")
 parser.add_argument("--files", default=-1, type=int, metavar='maxFiles',
 help="maximum number of files to include from input area (default is -1, meaning all files)")
+parser.add_argument("--noErr", default=False, action="store_true",
+help="do not save stderr in log files")
 parser.add_argument("--useLFN", default=False, action="store_true",
 help="when running on dataset do not use xrdcp, instead supply LFN directly to cmssw config")
 parser.add_argument("--proxy", default='',
@@ -109,7 +113,7 @@ help="location of proxy file, only used on hexcms")
 # convenience
 parser.add_argument("-f", "--force", action="store_true",
 help="overwrite job directory if it already exists")
-parser.add_argument("-b", "--rebuild", default=False, action="store_true",
+parser.add_argument("--rebuild", default=False, action="store_true",
 help="remake cmssw prebuild area needed to ship with job")
 parser.add_argument("-t", "--test", default=False, action="store_true",
 help="don't submit condor jobs but do all other steps")
@@ -219,7 +223,7 @@ if output_not_set and site == "cmslpc": args.output_cmslpc = True
 # create output area
 base = args.output
 if base[-1] == '/': base = base[:-1]
-timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
+timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
 output_path = base+'/'+timestamp
 if args.output_local:
   if site == "cmslpc": raise SystemExit('ERROR: Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
@@ -296,7 +300,7 @@ if args.input_cmslpc:
 if args.input_dataset:
   to_replace['__redirector__'] = 'root://cmsxrootd.fnal.gov/'
   if args.useLFN: to_replace['__copycommand__'] = 'NULL'
-  else: to_replace['__copycommand__'] = 'xrdcp --nopbar'
+  else: to_replace['__copycommand__'] = 'xrdcp --debug 1 --retry 3 --nopbar'
 use_template_to_replace(template_filename, replaced_filename, to_replace)
 os.system('mv ' + replaced_filename + ' ' + job_dir)
 
@@ -346,9 +350,14 @@ sub['transfer_input_files'] = \
 if not args.lumiMask is None:
   sub['transfer_input_files'] += ", "+args.lumiMask
 sub['transfer_output_files'] = '""'
+sub['on_exit_remove'] = '((ExitBySignal == False) && (ExitCode == 0)) || (NumJobStarts >= 3)'
 sub['initialdir'] = ''
+sub['JobBatchName'] = args.dir if args.batch is None else args.batch
 sub['output'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
-sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
+if args.noErr:
+  sub['error'] = '/dev/null'
+else:
+  sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
 sub['log'] = job_dir+'/log_$(Cluster).txt'
 
 # copy files to job diretory 
@@ -386,6 +395,7 @@ if args.input_dataset: i_assume = 'official dataset'
 print "Summary"
 print "-------"
 print "Job Directory       :", job_dir
+print "Job Batch Name      :", args.dir if args.batch is None else args.batch
 print "Job Specification   :", args.year +" "+datamc.upper()
 print "Total Jobs          :", str(TOTAL_JOBS)
 print "Total Files         :", str(num_total_files)

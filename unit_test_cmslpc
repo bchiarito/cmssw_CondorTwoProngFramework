@@ -2,10 +2,10 @@
 # Usage: ./script.sh -b
 
 # 3 minute real submit test
-# $ python condor_submit.py /store/user/lpcrutgers/sthayil/pseudoaxions/ttPhiPS_M-1000/miniAOD_33.root /store/user/bchiari1/unit_tests/ -d unit_test_cmslpc -f
+# $ python condor_submit.py /uscms/home/bchiari1/nobackup/rootfiles/sigGenCondorFramework/UL18_miniaodv2/dy_numEvent100.root /store/user/bchiari1/unit_tests/
 
 test_file_eos=/store/user/lpcrutgers/sthayil/pseudoaxions/ttPhiPS_M-1000/miniAOD_33.root
-test_file_local=/uscms/home/bchiari1/nobackup/miniaod/849A52BD-E632-4849-AEAE-33C988932E2F.root
+test_file_local=/uscms/home/bchiari1/nobackup/rootfiles/sigGenCondorFramework/UL18_miniaodv2/dy_numEvent100.root
 
 UnitTest()
 {
@@ -26,7 +26,6 @@ Rebuild()
 }
 NoRebuild()
 {
-  echo "No Rebuild"
   UnitTest
 }
 
@@ -34,7 +33,7 @@ while getopts ":b" option; do
    case $option in
       b) # Rebuild scratch area
          Rebuild
-         rm -rf TestJob_unit_test_cmslpc/
+         rm -rf TestJob_unit_test_cmslpc
          exit;;
    esac
 done

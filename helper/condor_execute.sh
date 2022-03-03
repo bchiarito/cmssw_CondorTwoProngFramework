@@ -73,7 +73,7 @@ ls -ldh *
 echo ''
 echo '&&& cmsRun cfg.py &&&'
 #echo cmsRun NANOAOD_$4_UL18_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$6
-cmsRun NANOAOD_$4_$5_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$6
+cmsRun NANOAOD_$4_$5_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$6 maxEvents=-1
 echo ''
 ls -ldh *.root
 echo ''
@@ -110,9 +110,23 @@ echo '&&& Current Directory and Contents: &&&'
 pwd
 ls -ldh *
 echo ''
+FINALFILE=NANOAOD_TwoProng.root
+if [ -f "$FINALFILE" ]; then
+    :
+else 
+    echo 'ERROR: No file NANOAOD_TwoProng.root!'
+    exit 2
+fi
 
 echo '&&& Running Stageout Script with command: &&&'
 echo 'python' $2 $3
 python $2 $3
+exitcode=$?
+if [[ exitcode -eq 0 ]] ; then
+    :
+else
+    echo 'ERROR: stageout exited with non-zero exit code!'
+    exit 1
+fi
 echo ''
 echo '&&& Finished &&&'
