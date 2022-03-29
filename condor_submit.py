@@ -62,7 +62,7 @@ def use_template_to_replace(template_filename, replaced_filename, to_replace):
     temp.write(replaced)
 
 # command line options
-parser = argparse.ArgumentParser(description="")
+parser = argparse.ArgumentParser(description="", usage="%(prog)s --year=YEAR [--mc | --data] [-n=N | --numPerJob=N] --lumiMask=</path/to/json> --d=JOB_DIR input output")
 
 # input/output
 parser.add_argument("input", 
@@ -97,10 +97,13 @@ help="path to lumi mask json file")
 # meta-run specification
 parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
 help="name of job directory, created in current directory")
-parser.add_argument("-b", "--batch", metavar='JobBatchName',
+parser.add_argument("-b", "--batch", metavar='STR',
 help="displays when using condor_q -batch")
-parser.add_argument("-n", "--num", default=1, type=int, metavar='INT',
+num_options = parser.add_mutually_exclusive_group()
+num_options.add_argument("-n", "--num", type=int, metavar='INT',
 help="number of subjobs in the job (default is 1)")
+num_options.add_argument("--numPerJob", type=int, metavar='INT',
+help="number of files per subjobs")
 parser.add_argument("--files", default=-1, type=int, metavar='maxFiles',
 help="maximum number of files to include from input area (default is -1, meaning all files)")
 parser.add_argument("--noErr", default=False, action="store_true",
@@ -259,9 +262,13 @@ os.system('mkdir ' + job_dir + '/stdout')
 
 # splitting
 num_total_files = len(input_files)
-num_total_jobs = args.num
-num_files_per_job = math.ceil(num_total_files / float(num_total_jobs))
-N = int(num_files_per_job)
+if args.num==None and args.numPerJob==None: args.num = 1
+if args.numPerJob == None:
+  num_total_jobs = args.num
+  num_files_per_job = math.ceil(num_total_files / float(num_total_jobs))
+  N = int(num_files_per_job)
+else:
+  N = args.numPerJob
 
 # prepare input file files
 input_filenames = [] # each entry a filename, and the file is a txt file of input filenames one per line
@@ -350,7 +357,8 @@ sub['transfer_input_files'] = \
 if not args.lumiMask is None:
   sub['transfer_input_files'] += ", "+args.lumiMask
 sub['transfer_output_files'] = '""'
-sub['on_exit_remove'] = '((ExitBySignal == False) && (ExitCode == 0)) || (NumJobStarts >= 3)'
+#sub['on_exit_remove'] = '(ExitBySignal == False) && (ExitCode == 0)'
+#sub['max_retries'] = '3'
 sub['initialdir'] = ''
 sub['JobBatchName'] = args.dir if args.batch is None else args.batch
 sub['output'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
