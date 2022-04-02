@@ -34,6 +34,7 @@ stageout_filename = 'stageout.py'
 jobinfo_filename = 'job_info.py'
 dataset_cache = 'datasets'
 fix_condor_hexcms_script = 'hexcms_fix_python.sh'
+hexcms_proxy_script = 'hexcms_proxy_setup.sh'
 cmssw_prebuild_area = 'prebuild'
 
 # import condor modules
@@ -193,6 +194,8 @@ else:
   raise SystemExit('ERROR: Checking input failed! Could not determine input type.')
 #print "Processed", len(input_files), "files"
 #print "  example file: ", input_files[0].strip()
+if len(input_files)==0:
+  raise SystemExit('ERROR: No input files found! Check input argument.')
 example_inputfile = str(input_files[0].strip())
 ex_in = example_inputfile
 
@@ -327,6 +330,20 @@ if args.rebuild:
 if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 
+# check proxy
+if site == 'hexcms' and args.input_dataset:
+  if args.proxy == '':
+    subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)
+    proxy_path = (subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)).strip()
+  else:
+    proxy_path = args.proxy
+  if not os.path.isfile(proxy_path):
+    raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-init -voms cms")
+  os.system('cp '+proxy_path+' .')
+  proxy_filename = os.path.basename(proxy_path)
+if site == 'cmslpc':
+  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
+
 # define submit files
 sub = htcondor.Submit()
 sub['executable'] = helper_dir+'/'+executable
@@ -339,7 +356,7 @@ sub['should_transfer_files'] = 'YES'
 sub['+JobFlavor'] = 'longlunch'
 sub['Notification'] = 'Never'
 if site == 'cmslpc': sub['use_x509userproxy'] = 'true'
-if site == 'hexcms': sub['x509userproxy'] = os.path.basename(args.proxy)
+if site == 'hexcms' and args.input_dataset: sub['x509userproxy'] = os.path.basename(proxy_path)
 sub['transfer_input_files'] = \
   job_dir+'/'+unpacker_filename + ", " + \
   job_dir+'/'+stageout_filename + ", " + \
@@ -370,14 +387,6 @@ with open(submit_file_filename, 'w') as f:
 os.system('mv ' + submit_file_filename + ' ' + job_dir)
 os.system('cp ' + helper_dir +'/'+ executable + ' ' + job_dir)
 
-# check proxy
-if site == 'hexcms' and args.input_dataset and args.proxy == '':
-  raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-info and provide 'path' variable to --proxy")
-if site == 'hexcms' and args.input_dataset and not args.proxy == '':
-  if not os.path.isfile(os.path.basename(args.proxy)):
-    os.system('cp '+args.proxy+' .')
-if site == 'cmslpc':
-  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
 
 # get the schedd
 coll = htcondor.Collector()
