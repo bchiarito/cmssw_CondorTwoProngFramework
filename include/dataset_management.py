@@ -15,8 +15,8 @@ def isCached(dataset, dirname):
   if not os.path.isdir(dirname):
     raise Exception('Dataset Management: Not a valid cache directory!')
   d = convertToDir(dataset)
-  if os.path.isdir(dirname+'/'+d): return True
-  return False
+  if os.path.isdir(dirname+'/'+d) and os.path.isfile(dirname+'/'+d+'/'+master_filename): return True
+  else: return False
 
 def process(dataset, dirname):
   if isCached(dataset, dirname):
