@@ -18,6 +18,8 @@ parser.add_argument("-s", "--summary", default=False, action="store_true",help="
 parser.add_argument("--onlyFinished", default=False, action="store_true",help="ignore 'running' and 'submitted' job Ids")
 parser.add_argument("--notFinished", default=False, action="store_true",help="ignore 'finished' job Ids")
 parser.add_argument("--onlyError", default=False, action="store_true",help="ignore 'running', 'submitted', and 'finished, job Ids")
+parser.add_argument("--onlyResubmits", default=False, action="store_true",help="only job Ids resubmitted at least once")
+parser.add_argument("--group", default=False, action="store_true",help="group according to job Id status, instead of numerical order")
 args = parser.parse_args()
 
 # constants
@@ -200,11 +202,25 @@ for resubmit_cluster,procs in job.resubmits:
 
 # Print Status
 print "Results for ClusterId", cluster, "at schedd", schedd_name
+for count, resubmit_cluster in enumerate(job.resubmits):
+  print "  Resubmit", count+1, "ClusterId", resubmit_cluster[0]
+print "Job output area:", output_area
+if output_eos:
+  output = subprocess.check_output('/uscms/home/bchiari1/bin/eosdu -h '+output_area, shell=True)
+  size = output.strip()[:-1]
+  suffix = output.strip()[-1]
+else: # local
+  output = subprocess.check_output('du -hs '+output_area, shell=True)
+  size = output.split()[0].strip()[:-1]
+  suffix = output.split()[0].strip()[-1]
+print "Total output size ", size, suffix
+
 print "Job output area:", output_area
 if not args.summary: print ' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
        'Proc', 'Status', 'Resubs', 'Wall Time', 'Output File', 'Msg'
 )
 if args.summary: summary = {}
+lines = []
 for jobNum in subjobs:
   subjob = subjobs[jobNum]
   status = subjob.get('status','')
@@ -225,12 +241,22 @@ for jobNum in subjobs:
   if args.notFinished and (status=='finished'): continue
   resubs = subjob.get('resubmitted', '')
   if resubs == 0: resubs = ''
-  if not args.summary: print ' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
+  if args.onlyResubmits and resubs == '': continue  
+  lines.append(' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
          str(jobNum), str(status), str(resubs), str(totalTime), str(size), str(reason)
-  )
+  ))
   if args.summary:
     if status in summary: summary[status] += 1
     else: summary[status] = 1
+
+if not args.summary:
+  if args.group:
+    def status(line):
+      return (line.split('|'))[1]
+    lines = sorted(lines, key=status, reverse=True)
+  for line in lines:
+    print line
+
 if args.summary:
   total = 0
   for key in summary:
@@ -238,6 +264,3 @@ if args.summary:
   print '{:<15} | {}'.format('Status', 'Job Ids ({} total)'.format(total))
   for status in summary:
     print '{:<15} | {}'.format(str(status), str(summary[status]))
-
-# Cleanup
-#os.system('rm '+json_filename)
