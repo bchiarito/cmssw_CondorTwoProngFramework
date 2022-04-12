@@ -310,7 +310,7 @@ if args.input_cmslpc:
 if args.input_dataset:
   to_replace['__redirector__'] = 'root://cmsxrootd.fnal.gov/'
   if args.useLFN: to_replace['__copycommand__'] = 'NULL'
-  else: to_replace['__copycommand__'] = 'xrdcp --debug 1 --retry 3 --nopbar'
+  else: to_replace['__copycommand__'] = 'xrdcp --nopbar'
 use_template_to_replace(template_filename, replaced_filename, to_replace)
 os.system('mv ' + replaced_filename + ' ' + job_dir)
 
@@ -350,6 +350,7 @@ if site == 'hexcms' and args.input_dataset:
   proxy_filename = os.path.basename(proxy_path)
 if site == 'cmslpc':
   time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
 # define submit files
 sub = htcondor.Submit()
