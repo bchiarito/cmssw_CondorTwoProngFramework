@@ -8,8 +8,18 @@ import json
 import time
 from calendar import timegm
 import datetime
-import classad
-import htcondor
+
+# import condor modules
+fix_condor_hexcms_script = 'hexcms_fix_python.sh'
+try:
+  import classad
+  import htcondor
+except ImportError as err:
+  if site == 'hexcms':
+    raise SystemExit('ERROR: On hexcms, please source this file before running: ' + fix_condor_hexcms_script)
+  if site == 'cmslpc':
+    print 'ERROR: Could not import classad or htcondor. Verify that python is default and not from cmssw release (do not cmsenv).'
+    raise err
 
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("jobDir",help="the condor_submit.py job directory")
