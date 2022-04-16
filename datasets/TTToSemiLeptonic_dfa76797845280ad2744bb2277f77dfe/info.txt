@@ -1,0 +1,6 @@
+Dataset: /TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM
+Size: 26.8 TB
+Files: 10,010
+Events: 478,982,000
+47,850 events/file
+2.7 GB/file

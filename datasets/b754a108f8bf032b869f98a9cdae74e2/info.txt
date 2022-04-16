@@ -1,1 +1,0 @@
-Dataset: /EGamma/Run2018C-UL2018_MiniAODv2-v1/MINIAOD
