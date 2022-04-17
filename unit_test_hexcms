@@ -15,7 +15,7 @@ UnitTest()
 Rebuild()
 {
   echo "Got -b option: Rebuild"
-  ./helper/cmssw_src_setup.sh
+  ./helper/prebuild_setup.sh
   UnitTest
 }
 NoRebuild()

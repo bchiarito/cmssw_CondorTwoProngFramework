@@ -10,7 +10,7 @@ test_file_local=/uscms/home/bchiari1/nobackup/rootfiles/sigGenCondorFramework/UL
 UnitTest()
 {
   printf "\n--- Test 1 ---\n\n"
-  python condor_submit.py $test_file_local --input_local /store/user/bchiari1/unit_tests/ -d unit_test_cmslpc -t -f
+  #python condor_submit.py $test_file_local --input_local /store/user/bchiari1/unit_tests/ -d unit_test_cmslpc -t -f
   printf "\n--- Test 2 ---\n\n"
   python condor_submit.py $test_file_eos /store/user/bchiari1/unit_tests/ -d unit_test_cmslpc -t -f
   printf "\n--- Test 3 ---\n\n"
@@ -21,7 +21,7 @@ UnitTest()
 Rebuild()
 {
   echo "Got -b option: Rebuild"
-  ./helper/cmssw_src_setup.sh
+  ./helper/prebuild_setup.sh
   UnitTest
 }
 NoRebuild()

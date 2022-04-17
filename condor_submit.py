@@ -25,9 +25,9 @@ else: raise SystemExit('ERROR: Unrecognized site: not hexcms, cmslpc, or lxplus'
 # constants
 helper_dir = 'helper'
 executable = 'condor_execute.sh'
-src_setup_script = 'cmssw_src_setup.sh'
+src_setup_script = 'prebuild_setup.sh' # also in unit test scripts
 submit_file_filename = 'submit_file.jdl'
-input_file_filename_base = 'infiles' # also assumed in executable
+input_file_filename_base = 'infiles' # also in executable
 finalfile_filename = 'NANOAOD_TwoProng.root'
 unpacker_filename = 'unpacker.py'
 stageout_filename = 'stageout.py'
