@@ -63,26 +63,26 @@ def use_template_to_replace(template_filename, replaced_filename, to_replace):
     temp.write(replaced)
 
 # command line options
-parser = argparse.ArgumentParser(description="", usage="%(prog)s --year=YEAR [--mc | --data] [-n=N | --numPerJob=N] --lumiMask=</path/to/json> --d=JOB_DIR input output")
+parser = argparse.ArgumentParser(description="", usage="python %(prog)s INPUT OUTPUT")
 
 # input/output
-parser.add_argument("input", 
+parser.add_argument("input", metavar='INPUT',
 help="Absolute path to local directory/file, cmslpc eos storage (/store/user/...), \
 text file (end in .txt) with one file location per line, or dataset name (/*/*/MINIAOD(SIM)).")
 input_options = parser.add_mutually_exclusive_group()
 input_options.add_argument("--input_local", action="store_true",
-help="input is on the local filesystem")
+help=argparse.SUPPRESS)
 input_options.add_argument("--input_cmslpc", action="store_true",
-help="input is an eos area on cmslpc")
+help=argparse.SUPPRESS)
 input_options.add_argument("--input_dataset", action="store_true",
-help="input is an official dataset")
-parser.add_argument("output", 
+help=argparse.SUPPRESS)
+parser.add_argument("output", metavar='OUTPUT',
 help="Absoulte path to local directory, or cmslpc eos storage (/store/user/...).")
 output_options = parser.add_mutually_exclusive_group()
 output_options.add_argument("--output_local", action="store_true",
-help="output is written to local filesystem")
+help=argparse.SUPPRESS)
 output_options.add_argument("--output_cmslpc", action="store_true",
-help="output is written to an eos area on cmslpc")
+help=argparse.SUPPRESS)
 
 # run specification
 datamc_options = parser.add_mutually_exclusive_group()
@@ -90,31 +90,37 @@ datamc_options.add_argument("--mc", action="store_true",
 help="running on mc (default)")
 datamc_options.add_argument("--data", action="store_true",
 help="running on data")
-parser.add_argument("-y", "--year", default="UL18",
+parser.add_argument("-y", "--year", default="UL18", choices=['UL16','UL17','UL18'], metavar='ULYY',
 help="prescription to follow: UL18 (default), UL17, UL16")
-parser.add_argument("--lumiMask", default=None, metavar='', dest='lumiMask',
+parser.add_argument("-l", "--lumiMask", default=None, metavar='', dest='lumiMask',
 help="path to lumi mask json file")
+parser.add_argument("--twoprongSB", default="None", choices=['None','iso','sym','both'], metavar='CHOICE',
+help="twoprong sideband: None (default), iso")
+parser.add_argument("--photonSB", default="None", choices=['None'], metavar='CHOICE',
+help="photon sideband (default None)")
+parser.add_argument("--selection", default="None", choices=['None', 'muon', 'photon'], metavar='CHOICE',
+help="event preselection None (default), muon, photon)")
 
 # meta-run specification
-parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
-help="name of job directory, created in current directory")
-parser.add_argument("-b", "--batch", metavar='STR',
-help="displays when using condor_q -batch")
 num_options = parser.add_mutually_exclusive_group()
-num_options.add_argument("-n", "--num", type=int, metavar='INT',
-help="number of subjobs in the job (default is 1)")
-num_options.add_argument("--numPerJob", type=int, metavar='INT',
-help="number of files per subjobs")
-parser.add_argument("--files", default=-1, type=int, metavar='maxFiles',
-help="maximum number of files to include from input area (default is -1, meaning all files)")
+num_options.add_argument("--numJobs", type=int, metavar='INT',
+help="total number of subjobs in the job (default is 1)")
+num_options.add_argument("--filesPerJob", type=int, metavar='INT',
+help="number of files per subjob")
+parser.add_argument("--files", default=-1, type=float, metavar='maxFiles',
+help="total files, <1 treated as a fraction e.g. 0.1 means 10%% (default is all)")
 parser.add_argument("--noErr", default=False, action="store_true",
 help="do not save stderr in log files")
 parser.add_argument("--useLFN", default=False, action="store_true",
-help="when running on dataset do not use xrdcp, instead supply LFN directly to cmssw config")
+help="do not use xrdcp, supply LFN directly")
 parser.add_argument("--proxy", default='',
 help="location of proxy file, only used on hexcms")
 
 # convenience
+parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
+help="name of job directory, created in current directory")
+parser.add_argument("-b", "--batch", metavar='STR',
+help="displays when using condor_q -batch")
 parser.add_argument("-f", "--force", action="store_true",
 help="overwrite job directory if it already exists")
 parser.add_argument("--rebuild", default=False, action="store_true",
@@ -140,6 +146,11 @@ if not (args.year == 'UL18' or
         args.year == 'UL16'):
   raise SystemExit('ERROR: --year must be one of: UL18, UL17, UL16')
 
+# define max files
+maxfiles = args.files
+if args.files < 1:
+  percentmax = True
+
 # check input
 input_not_set = False
 if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
@@ -154,10 +165,12 @@ s = args.input
 # input is .txt file
 if s[len(s)-4:len(s)] == ".txt":
   with open(args.input) as f:
+    totalfiles = len(f) 
+    if percentmax: maxfiles = int(args.files * totalfiles)
     for line in f:
       input_files.append(line.strip())
       #print "  input file: ", line.strip()
-      if len(input_files) == args.files: break
+      if len(input_files) == maxfiles: break
 # input is local
 elif args.input_local:
   if os.path.isfile(args.input):
@@ -173,7 +186,7 @@ elif args.input_local:
       if not line.find(".root") == -1:
         input_files.append(line)
         #print "  found local file: ", line
-        if len(input_files) == args.files: break
+        if len(input_files) == maxfiles: break
     print ""
 # input is eos area on cmslc
 elif args.input_cmslpc:
@@ -183,10 +196,12 @@ elif args.input_cmslpc:
   else:
     list_of_files = subprocess.check_output("xrdfs root://cmseos.fnal.gov ls " + args.input, shell=True)
     list_of_files = list_of_files.split('\n')
+    totalfiles = len(list_of_files) 
+    if percentmax: maxfiles = int(args.files * totalfiles)
     for line in list_of_files:
       input_files.append(line)
       #print "  found eos file: ", line
-      if len(input_files) == args.files: break
+      if len(input_files) == maxfiles: break
 # input is dataset name
 elif args.input_dataset:
   dataset_name = args.input
@@ -265,13 +280,13 @@ os.system('mkdir ' + job_dir + '/stdout')
 
 # splitting
 num_total_files = len(input_files)
-if args.num==None and args.numPerJob==None: args.num = 1
-if args.numPerJob == None:
-  num_total_jobs = args.num
+if args.numJobs==None and args.filesPerJob==None: args.numJobs = 1
+if args.filesPerJob == None:
+  num_total_jobs = args.numJobs
   num_files_per_job = math.ceil(num_total_files / float(num_total_jobs))
   N = int(num_files_per_job)
 else:
-  N = args.numPerJob
+  N = args.filesPerJob
 
 # prepare input file files
 input_filenames = [] # each entry a filename, and the file is a txt file of input filenames one per line
@@ -353,13 +368,27 @@ if site == 'cmslpc':
   if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
 # define submit files
+if args.twoprongSB == 'None':
+  constructor = 'default'
+if args.twoprongSB == 'iso':
+  constructor = 'addLooseIso'
+  twoprong_sideband = 'Isolation'
+if args.selection == 'None':
+  selection = 'default'
+if args.selection == 'muon':
+  selection = 'muon'
+  selection_text = 'slimmedMuons >= 1'
+if args.selection == 'photon':
+  selection = 'photon'
+  selection_text = 'slimmedPhotons >= 1'
 sub = htcondor.Submit()
 sub['executable'] = helper_dir+'/'+executable
-sub['arguments'] = unpacker_filename + " " + stageout_filename + " $(Process) " + datamc + " " + args.year
+sub['arguments'] = unpacker_filename+" "+stageout_filename+" $(Process) "+datamc+" "+args.year
 if args.lumiMask is None:
   sub['arguments'] += " None"
 else:
   sub['arguments'] += " "+os.path.basename(args.lumiMask)
+sub['arguments'] += " "+constructor+" "+selection
 sub['should_transfer_files'] = 'YES'
 sub['+JobFlavor'] = 'longlunch'
 sub['Notification'] = 'Never'
@@ -415,6 +444,10 @@ print "-------"
 print "Job Directory       :", job_dir
 print "Job Batch Name      :", args.dir if args.batch is None else args.batch
 print "Job Specification   :", args.year +" "+datamc.upper()
+if not args.twoprongSB=='None':
+  print "Twoprong Sideband   : " + twoprong_sideband
+if not args.selection=='None':
+  print "Preselection        : " + selection_text
 print "Total Jobs          :", str(TOTAL_JOBS)
 print "Total Files         :", str(num_total_files)
 print "Files/Job (approx)  :", str(N)

@@ -225,7 +225,6 @@ else: # local
   suffix = output.split()[0].strip()[-1]
 print "Total output size ", size, suffix
 
-print "Job output area:", output_area
 if not args.summary: print ' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
        'Proc', 'Status', 'Resubs', 'Wall Time', 'Output File', 'Msg'
 )

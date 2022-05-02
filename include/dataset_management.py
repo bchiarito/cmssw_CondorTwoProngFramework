@@ -64,6 +64,9 @@ def getFiles(dataset, dirname, maxFiles):
     raise Exception('Dataset Management: Trying to get files but dataset is not cached!')
   d = convertToDir(dataset)
   files = []
+  if maxFiles < 1:
+    totalfiles = len(open(dirname+'/'+d+'/'+master_filename, 'r').readlines())
+    maxFiles = int(maxFiles * totalfiles)
   with open(dirname+'/'+d+'/'+master_filename, 'r') as f:
     for line in f:
       files.append(line)

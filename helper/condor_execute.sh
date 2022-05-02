@@ -29,7 +29,7 @@ echo ''
 echo '&&& Setup CMSSW area &&&'
 export HOME=$INITIAL_DIR
 export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
-export SCRAM_ARCH=slc7_amd64_gcc700
+export SCRAM_ARCH=slc7_amd64_gcc820
 source $VO_CMS_SW_DIR/cmsset_default.sh
 scramv1 project CMSSW CMSSW_10_6_20
 cd CMSSW_10_6_20/src
@@ -72,24 +72,26 @@ pwd
 ls -ldh *
 echo ''
 echo '&&& cmsRun cfg.py &&&'
-#echo cmsRun NANOAOD_$4_UL18_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$6
 cmsRun NANOAOD_$4_$5_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$6 maxEvents=-1
 echo ''
 ls -ldh *.root
 echo ''
-echo '&&& cmsRun completed, moving back to src/ to checkout NanoAODTools framework &&&'
-cd $CMSSW_BASE/src
-git clone -q https://github.com/cms-nanoAOD/nanoAOD-tools.git PhysicsTools/NanoAODTools
-cd PhysicsTools/NanoAODTools
-mv $CMSRUN_DIR/twoprongModule.py ./python/postprocessing/modules/
-mv $CMSRUN_DIR/dropPF.txt .
-mv $CMSRUN_DIR/copy_tree.py .
-echo ''
-echo '&&& Rebuild (scram b) &&&'
-scramv1 b
+echo '&&& cmsRun completed &&&'
+#cd $CMSSW_BASE/src
+#git clone -q https://github.com/cms-nanoAOD/nanoAOD-tools.git PhysicsTools/NanoAODTools
+#cd PhysicsTools/NanoAODTools
+#mv $CMSRUN_DIR/twoprongModule.py ./python/postprocessing/modules/
+#mv $CMSRUN_DIR/dropPF.txt .
+#mv $CMSRUN_DIR/copy_tree.py .
+#echo ''
+#echo '&&& Rebuild (scram b) &&&'
+#scramv1 b
 echo ''
 echo '&&& Run NanoAODTools postprocessor &&&'
-python scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.twoprongModule myModuleConstr --bo dropPF.txt
+mv ../../../PhysicsTools/NanoAODTools/test/dropPF.txt .
+mv ../../../PhysicsTools/NanoAODTools/test/copy_tree.py .
+echo python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.twoprongModule twoprongConstr_$7 --bo dropPF.txt
+python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.twoprongModule twoprongConstr_$7,selectionConstr_$8 --bo dropPF.txt
 echo ''
 echo '&&& Run copy_tree.py &&&'
 python copy_tree.py NanoAOD_Skim.root
