@@ -12,11 +12,10 @@ def convertToDir(dataset):
   h = dataset.find('-')
   s = dataset[1:].find('/')
   s += 1
-  if u<=0 : u = 100
-  if h<=0 : h = 100
-  if s<=0 : s = 100
+  if u<=0 : u = 1000
+  if h<=0 : h = 1000
+  if s<=0 : s = 1000
   i = min(u,h,s)
-  #print dataset, u, h, s, i
   return str(dataset[:i])+"_"+str(hashlib.md5(dataset).hexdigest())
 
 def convertToString(dataset):
@@ -45,9 +44,7 @@ def process(dataset, dirname):
   nevents = int(parsed_info['nevents'])
   avg_events_files = int(float(nevents)/nfiles)
   avg_size_files = space*1000/nfiles
-  #print files
   print "Dataset Management: DAS query Successful."
-  #sys.exit()
   os.system('mkdir -p '+dirname+'/'+d)
   with open(dirname+'/'+d+'/'+master_filename, 'w') as f:
     f.write(files)
