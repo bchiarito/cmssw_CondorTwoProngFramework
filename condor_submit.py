@@ -148,8 +148,8 @@ if not (args.year == 'UL18' or
 
 # define max files
 maxfiles = args.files
-if args.files < 1:
-  percentmax = True
+if args.files < 1: percentmax = True
+else: percentmax = False
 
 # check input
 input_not_set = False
@@ -292,6 +292,8 @@ else:
 input_filenames = [] # each entry a filename, and the file is a txt file of input filenames one per line
 for count,set_of_lines in enumerate(grouper(input_files, N, '')):
   with open(input_file_filename_base+'_'+str(count)+'.dat', 'w') as fi:
+    if len(set_of_lines) == 0: continue
+    if set_of_lines[0] == '': continue
     for line in set_of_lines:
       if line == '': continue
       fi.write(line.strip()+'\n')
