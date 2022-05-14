@@ -1,0 +1,6 @@
+Dataset: /MinimumBias/Run2018C-12Nov2019_UL2018-v1/MINIAOD
+Size: 0.1 TB
+Files: 109
+Events: 35,471,139
+325,423 events/file
+0.8 GB/file

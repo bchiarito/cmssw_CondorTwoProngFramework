@@ -1,0 +1,6 @@
+Dataset: /JetHT/Run2018B-12Nov2019_UL2018-v2/MINIAOD
+Size: 3.4 TB
+Files: 1,231
+Events: 78,255,208
+63,570 events/file
+2.8 GB/file

@@ -1,0 +1,6 @@
+Dataset: /MET/Run2018D-12Nov2019_UL2018_rsb-v2/MINIAOD
+Size: 6.9 TB
+Files: 2,304
+Events: 160,411,782
+69,623 events/file
+3.0 GB/file
