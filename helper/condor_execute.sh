@@ -77,15 +77,6 @@ echo ''
 ls -ldh *.root
 echo ''
 echo '&&& cmsRun completed &&&'
-#cd $CMSSW_BASE/src
-#git clone -q https://github.com/cms-nanoAOD/nanoAOD-tools.git PhysicsTools/NanoAODTools
-#cd PhysicsTools/NanoAODTools
-#mv $CMSRUN_DIR/twoprongModule.py ./python/postprocessing/modules/
-#mv $CMSRUN_DIR/dropPF.txt .
-#mv $CMSRUN_DIR/copy_tree.py .
-#echo ''
-#echo '&&& Rebuild (scram b) &&&'
-#scramv1 b
 echo ''
 echo '&&& Run NanoAODTools postprocessor &&&'
 mv ../../../PhysicsTools/NanoAODTools/test/dropPF.txt .
