@@ -30,6 +30,7 @@ parser.add_argument("--notFinished", default=False, action="store_true",help="ig
 parser.add_argument("--onlyError", default=False, action="store_true",help="ignore 'running', 'submitted', and 'finished, job Ids")
 parser.add_argument("--onlyResubmits", default=False, action="store_true",help="only job Ids resubmitted at least once")
 parser.add_argument("--group", default=False, action="store_true",help="group according to job Id status, instead of numerical order")
+parser.add_argument("--aborted", "-a", default = False, action="store_true", help="prints a formatted list of aborted job IDs to be resubmitted")
 args = parser.parse_args()
 
 # constants
@@ -230,11 +231,14 @@ if not args.summary: print ' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
 )
 if args.summary: summary = {}
 lines = []
+aborted_jobs = []
 for jobNum in subjobs:
   subjob = subjobs[jobNum]
   status = subjob.get('status','')
   reason = subjob.get('reason','')
   reason = reason[0:80]
+  if status == 'aborted':  # determines if the job was aborted
+      aborted_jobs.append(jobNum)
   if 'start_time' in subjob and 'end_time' in subjob:
     totalTime = str(datetime.timedelta(seconds = timegm(subjob['end_time']) - timegm(subjob['start_time'])))
   elif 'start_time' in subjob:
@@ -273,3 +277,21 @@ if args.summary:
   print '{:<15} | {}'.format('Status', 'Job Ids ({} total)'.format(total))
   for status in summary:
     print '{:<15} | {}'.format(str(status), str(summary[status]))
+
+# print formatted timeout job list if requested
+if args.aborted and len(aborted_jobs) != 0:
+    print('------------------------------------------------------------------------------')
+    print("Jobs that were aborted: ")
+    print("")
+    x = 0
+    while x < len(aborted_jobs):
+        if x == len(aborted_jobs) - 1:
+            sys.stdout.write(str(aborted_jobs[x]))
+            break
+        sys.stdout.write(str(aborted_jobs[x]) + ",")
+        x += 1
+    print("")
+    print('------------------------------------------------------------------------------')
+elif args.aborted:
+    print("No jobs were aborted.")
+
