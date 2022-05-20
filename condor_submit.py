@@ -369,12 +369,17 @@ if site == 'cmslpc':
   time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
   if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
-# define submit files
+# choose modules
 if args.twoprongSB == 'None':
   constructor = 'default'
 if args.twoprongSB == 'iso':
   constructor = 'addLooseIso'
   twoprong_sideband = 'Isolation'
+if args.photonSB == 'None':
+  phoconstructor = 'default'
+if args.photonSB == 'full':
+  phoconstructor = 'addLoose'
+  photon_sideband = 'Full'
 if args.selection == 'None':
   selection = 'default'
 if args.selection == 'muon':
@@ -383,6 +388,8 @@ if args.selection == 'muon':
 if args.selection == 'photon':
   selection = 'photon'
   selection_text = 'slimmedPhotons >= 1'
+
+# define submit files
 sub = htcondor.Submit()
 sub['executable'] = helper_dir+'/'+executable
 sub['arguments'] = unpacker_filename+" "+stageout_filename+" $(Process) "+datamc+" "+args.year
@@ -390,7 +397,7 @@ if args.lumiMask is None:
   sub['arguments'] += " None"
 else:
   sub['arguments'] += " "+os.path.basename(args.lumiMask)
-sub['arguments'] += " "+constructor+" "+selection
+sub['arguments'] += " "+constructor+" "+phoconstructor+" "+selection
 sub['should_transfer_files'] = 'YES'
 sub['+JobFlavor'] = 'longlunch'
 sub['Notification'] = 'Never'
@@ -448,6 +455,8 @@ print "Job Batch Name      :", args.dir if args.batch is None else args.batch
 print "Job Specification   :", args.year +" "+datamc.upper()
 if not args.twoprongSB=='None':
   print "Twoprong Sideband   : " + twoprong_sideband
+if not args.photonSB=='None':
+  print "Photon Sideband     : " + photon_sideband
 if not args.selection=='None':
   print "Preselection        : " + selection_text
 print "Total Jobs          :", str(TOTAL_JOBS)

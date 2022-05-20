@@ -81,8 +81,7 @@ echo ''
 echo '&&& Run NanoAODTools postprocessor &&&'
 mv ../../../PhysicsTools/NanoAODTools/test/dropPF.txt .
 mv ../../../PhysicsTools/NanoAODTools/test/copy_tree.py .
-echo python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.twoprongModule twoprongConstr_$7 --bo dropPF.txt
-python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.twoprongModule twoprongConstr_$7,selectionConstr_$8 --bo dropPF.txt
+python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.twoprongModule twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
 echo ''
 echo '&&& Run copy_tree.py &&&'
 python copy_tree.py NanoAOD_Skim.root
