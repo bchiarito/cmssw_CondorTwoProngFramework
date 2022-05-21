@@ -8,6 +8,14 @@ import json
 import time
 from calendar import timegm
 import datetime
+import socket
+
+# get site
+hostname = socket.gethostname()
+if 'hexcms' in hostname: site = 'hexcms'
+elif 'fnal.gov' in hostname: site = 'cmslpc'
+elif 'cern.ch' in hostname: site = 'lxplus'
+else: raise SystemExit('ERROR: Unrecognized site: not hexcms, cmslpc, or lxplus')
 
 # import condor modules
 fix_condor_hexcms_script = 'hexcms_fix_python.sh'
