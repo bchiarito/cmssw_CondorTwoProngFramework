@@ -35,6 +35,7 @@ jobinfo_filename = 'job_info.py'
 dataset_cache = 'datasets'
 fix_condor_hexcms_script = 'hexcms_fix_python.sh'
 hexcms_proxy_script = 'hexcms_proxy_setup.sh'
+hexcms_proxy_script_timeleft = 'hexcms_proxy_timeleft.sh'
 cmssw_prebuild_area = 'prebuild'
 
 # import condor modules
@@ -365,6 +366,8 @@ if site == 'hexcms' and args.input_dataset:
     raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-init -voms cms")
   os.system('cp '+proxy_path+' .')
   proxy_filename = os.path.basename(proxy_path)
+  time_left = str(timedelta(seconds=int(subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script_timeleft, shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! In new shell, renew with voms-proxy-init -voms cms")
 if site == 'cmslpc':
   time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
   if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
@@ -470,7 +473,7 @@ print "Output Directory    :", output_path
 if not args.lumiMask is None:
   print "Lumi Mask           : " + os.path.basename(args.lumiMask)
 print "Schedd              :", schedd_ad["Name"]
-if site=='cmslpc': print "Grid Proxy          :", time_left + ' left'
+if args.input_dataset: print "Grid Proxy          :", time_left + ' left'
 
 # premature exit for test
 if args.test:
