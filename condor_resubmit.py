@@ -8,6 +8,17 @@ import json
 import time
 from calendar import timegm
 import datetime
+import socket
+
+# constants
+submit_filename = 'submit_file.jdl'
+
+# get site
+hostname = socket.gethostname()
+if 'hexcms' in hostname: site = 'hexcms'
+elif 'fnal.gov' in hostname: site = 'cmslpc'
+elif 'cern.ch' in hostname: site = 'lxplus'
+else: raise SystemExit('ERROR: Unrecognized site: not hexcms, cmslpc, or lxplus')
 
 # import condor modules
 fix_condor_hexcms_script = 'hexcms_fix_python.sh'
@@ -28,10 +39,6 @@ parser.add_argument("--batch",help="JobBatchName parameter, displays when using 
 parser.add_argument("-v", "--verbose", default=False, action="store_true",help="turn on debug messages")
 args = parser.parse_args()
 
-# constants
-json_filename = 'temp.json'
-submit_filename = 'submit_file.jdl'
-
 # import job
 if args.verbose: print "DEBUG: Import job"
 sys.path.append(args.jobDir)
@@ -46,12 +53,16 @@ else: output_eos = False
 # get the schedd
 if args.verbose: print "DEBUG: Get Schedd"
 coll = htcondor.Collector()
-schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
-for s in schedd_query:
-  if str(s["Name"]) == str(schedd_name):
-    schedd_ad = s
-schedd = htcondor.Schedd(schedd_ad)
-if args.verbose: print "DEBUG:", schedd
+if site == 'cmslpc':
+  schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
+  for s in schedd_query:
+    if str(s["Name"]) == str(schedd_name):
+      schedd_ad = s
+  schedd = htcondor.Schedd(schedd_ad)
+if site == 'hexcms':
+  schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
+  schedd = htcondor.Schedd(schedd_ad)
+if args.verbose: print "DEBUG:", schedd_ad["Name"]
 
 # make list of procs to resubmit
 procs = []
@@ -61,24 +72,28 @@ procs_string = ''
 for p in procs:
  procs_string += str(p)+','
 procs_string = procs_string[:-1]
-#print procs
-#print procs_string
 
 # create new submit jdl
 batchName = "resub_for_"+job.cluster if args.batch is None else args.batch
 with open(args.jobDir+'/'+submit_filename) as f:
   submit_string = f.read()
-  #submit_string = submit_string.replace('log_'+job.cluster+'.txt', 'log_'+args.proc+'_'+cluster+'.txt')
   submit_string += "\nJobBatchName = " + batchName
   submit_string += '\nnoop_job = !stringListMember("$(Process)","'+procs_string+'")'
-  #print submit_string
+
+# python2 fix
+submit_dict = {}
+submit_string = submit_string.split('\n')
+for line in submit_string:
+  line_parse = line.split('=')
+  if len(line_parse) < 2: continue
+  key = line_parse[0].strip()
+  value = line_parse[1].strip()
+  if key == 'queue': continue
+  submit_dict[key] = value
 
 # make submit object
-sub = htcondor.Submit(submit_string)
-
-# check
-#i = raw_input()
-#if i == 'q': sys.exit()
+#sub = htcondor.Submit(submit_string)
+sub = htcondor.Submit(submit_dict)
 
 # move/delete old output
 for proc in procs:
