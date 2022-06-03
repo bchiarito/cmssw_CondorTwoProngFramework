@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+from __future__ import print_function
 import argparse
 import sys
 import subprocess
@@ -8,19 +9,12 @@ import math
 import re
 import time
 import socket
+from datetime import datetime, timedelta, date
+from itertools import zip_longest
 sys.path.append(os.path.join(sys.path[0],'include'))
 import dataset_management as dm
-from datetime import datetime
-from datetime import timedelta
-from datetime import date
-from itertools import izip_longest
-
-# get site
-hostname = socket.gethostname()
-if 'hexcms' in hostname: site = 'hexcms'
-elif 'fnal.gov' in hostname: site = 'cmslpc'
-elif 'cern.ch' in hostname: site = 'lxplus'
-else: raise SystemExit('ERROR: Unrecognized site: not hexcms, cmslpc, or lxplus')
+if hasattr(__builtins__, 'raw_input'):
+    input = raw_input
 
 # constants
 helper_dir = 'helper'
@@ -38,30 +32,37 @@ hexcms_proxy_script = 'hexcms_proxy_setup.sh'
 hexcms_proxy_script_timeleft = 'hexcms_proxy_timeleft.sh'
 cmssw_prebuild_area = 'prebuild'
 
+# subroutines
+def grouper(iterable, n, fillvalue=None):
+  args = [iter(iterable)] * n
+  return zip_longest(*args, fillvalue=fillvalue)
+def use_template_to_replace(template_filename, replaced_filename, to_replace):
+  with open(template_filename, 'rt') as template:
+    base = template.read()
+  replaced = copy.deepcopy(base)
+  replaced += "\n"
+  for key in to_replace:
+    replaced = replaced.replace(key, to_replace[key])
+  with open(replaced_filename, 'wt') as temp:
+    temp.write(replaced)
+
+# get site
+hostname = socket.gethostname()
+if 'hexcms' in hostname: site = 'hexcms'
+elif 'fnal.gov' in hostname: site = 'cmslpc'
+elif 'cern.ch' in hostname: site = 'lxplus'
+else: raise SystemExit('ERROR: Unrecognized site: not hexcms, cmslpc, or lxplus')
+
 # import condor modules
 try:
   import classad
   import htcondor
 except ImportError as err:
   if site == 'hexcms':
-    raise SystemExit('ERROR: On hexcms, please source this file before running: ' + fix_condor_hexcms_script)
-  if site == 'cmslpc':
-    print 'ERROR: Could not import classad or htcondor. Verify that python is default and not from cmssw release (do not cmsenv).'
     raise err
-
-# subroutines
-def grouper(iterable, n, fillvalue=None):
-  args = [iter(iterable)] * n
-  return izip_longest(*args, fillvalue=fillvalue)
-def use_template_to_replace(template_filename, replaced_filename, to_replace):
-  with open(template_filename, 'r') as template:
-    base = template.read()
-  replaced = copy.deepcopy(base)
-  replaced += "\n"
-  for key in to_replace:
-    replaced = replaced.replace(key, to_replace[key])
-  with open(replaced_filename, 'w') as temp:
-    temp.write(replaced)
+  if site == 'cmslpc':
+    print('ERROR: Could not import classad or htcondor. Verify that python is default and not from cmssw release (do not cmsenv).')
+    raise err
 
 # command line options
 parser = argparse.ArgumentParser(description="", usage="python %(prog)s INPUT OUTPUT")
@@ -85,7 +86,7 @@ help=argparse.SUPPRESS)
 output_options.add_argument("--output_cmslpc", action="store_true",
 help=argparse.SUPPRESS)
 
-# run specification
+# execution specification
 datamc_options = parser.add_mutually_exclusive_group()
 datamc_options.add_argument("--mc", action="store_true",
 help="running on mc (default)")
@@ -102,7 +103,7 @@ help="photon sideband (default None)")
 parser.add_argument("--selection", default="None", choices=['None', 'muon', 'photon'], metavar='CHOICE',
 help="event preselection None (default), muon, photon)")
 
-# meta-run specification
+# run specification
 num_options = parser.add_mutually_exclusive_group()
 num_options.add_argument("--numJobs", type=int, metavar='INT',
 help="total number of subjobs in the job (default is 1)")
@@ -110,6 +111,8 @@ num_options.add_argument("--filesPerJob", type=int, metavar='INT',
 help="number of files per subjob")
 parser.add_argument("--files", default=-1, type=float, metavar='maxFiles',
 help="total files, <1 treated as a fraction e.g. 0.1 means 10%% (default is all)")
+parser.add_argument("--trancheMax", type=int, metavar='INT', default=2500,
+help="max subjobs in a tranche")
 parser.add_argument("--noErr", default=False, action="store_true",
 help="do not save stderr in log files")
 parser.add_argument("--useLFN", default=False, action="store_true",
@@ -128,6 +131,8 @@ parser.add_argument("--rebuild", default=False, action="store_true",
 help="remake cmssw prebuild area needed to ship with job")
 parser.add_argument("-t", "--test", default=False, action="store_true",
 help="don't submit condor jobs but do all other steps")
+parser.add_argument("-v", "--verbose", default=False, action="store_true",
+help="activate debug output")
 
 # end command line options
 args = parser.parse_args()
@@ -147,6 +152,26 @@ if not (args.year == 'UL18' or
         args.year == 'UL16'):
   raise SystemExit('ERROR: --year must be one of: UL18, UL17, UL16')
 
+# process choice of modules
+if args.twoprongSB == 'None':
+  constructor = 'default'
+if args.twoprongSB == 'iso':
+  constructor = 'addLooseIso'
+  twoprong_sideband = 'Isolation'
+if args.photonSB == 'None':
+  phoconstructor = 'default'
+if args.photonSB == 'full':
+  phoconstructor = 'addLoose'
+  photon_sideband = 'Full'
+if args.selection == 'None':
+  selection = 'default'
+if args.selection == 'muon':
+  selection = 'muon'
+  selection_text = 'slimmedMuons >= 1'
+if args.selection == 'photon':
+  selection = 'photon'
+  selection_text = 'slimmedPhotons >= 1'
+
 # define max files
 maxfiles = args.files
 if args.files < 1: percentmax = True
@@ -160,9 +185,9 @@ if args.input_local == False and args.input_cmslpc == False and args.input_datas
   input_not_set = True
 if input_not_set and site == "hexcms": args.input_local = True
 if input_not_set and site == "cmslpc": args.input_cmslpc = True
-#print "Checking Input ..."
 input_files = [] # each entry a file location
 s = args.input
+
 # input is .txt file
 if s[len(s)-4:len(s)] == ".txt":
   with open(args.input) as f:
@@ -170,29 +195,25 @@ if s[len(s)-4:len(s)] == ".txt":
     if percentmax: maxfiles = int(args.files * totalfiles)
     for line in f:
       input_files.append(line.strip())
-      #print "  input file: ", line.strip()
       if len(input_files) == maxfiles: break
+
 # input is local
 elif args.input_local:
   if os.path.isfile(args.input):
-    #print "  found local file: ", args.input
     input_files.append(args.input)
-    #print ""
   if os.path.isdir(args.input):
     if args.input[len(args.input)-1] == '/': args.input = args.input[0:len(args.input)-1]
     cmd = 'ls -1 {}/*'.format(args.input)
-    output = subprocess.check_output(cmd, shell=True)
+    output = subprocess.check_output(cmd, shell=True).decode('utf-8')
     output = output.split('\n')
     for line in output:
       if not line.find(".root") == -1:
         input_files.append(line)
-        #print "  found local file: ", line
         if len(input_files) == maxfiles: break
-    print ""
+
 # input is eos area on cmslc
 elif args.input_cmslpc:
   if s[len(s)-5:len(s)] == ".root":
-    #print "  found eos file: ", args.input
     input_files.append(args.input)
   else:
     list_of_files = subprocess.check_output("xrdfs root://cmseos.fnal.gov ls " + args.input, shell=True)
@@ -201,22 +222,25 @@ elif args.input_cmslpc:
     if percentmax: maxfiles = int(args.files * totalfiles)
     for line in list_of_files:
       input_files.append(line)
-      #print "  found eos file: ", line
       if len(input_files) == maxfiles: break
+
 # input is dataset name
 elif args.input_dataset:
   dataset_name = args.input
   if not dm.isCached(dataset_name, dataset_cache): dm.process(dataset_name, dataset_cache)
   input_files = dm.getFiles(dataset_name, dataset_cache, args.files)
-  #print "  example dataset file: ", input_files[0].strip()
 else:
   raise SystemExit('ERROR: Checking input failed! Could not determine input type.')
-#print "Processed", len(input_files), "files"
-#print "  example file: ", input_files[0].strip()
+
+# finish checking input
 if len(input_files)==0:
   raise SystemExit('ERROR: No input files found! Check input argument.')
 example_inputfile = str(input_files[0].strip())
 ex_in = example_inputfile
+if args.verbose:
+  print("Input files:")
+  for input_file in input_files:
+    print('  '+input_file)
 
 # test input
 if args.input_cmslpc:
@@ -265,20 +289,6 @@ if args.output_cmslpc:
   if not ret == 0: raise SystemExit('ERROR: Failed eosrm test file from output eos area!')
   os.system('rm blank.txt')
 
-# make job directory
-if args.test:
-  job_dir = 'TestJob_' + args.dir
-  args.force = True
-else:
-  job_dir = 'Job_' + args.dir
-if os.path.isdir("./"+job_dir) and not args.force:
-  raise SystemExit("ERROR: Directory " + job_dir + " already exists. Use option -f to overwrite")
-if os.path.isdir("./"+job_dir) and args.force:
-  os.system('rm -rf ./' + job_dir)
-os.system('mkdir ' + job_dir)
-os.system('mkdir ' + job_dir + '/infiles')
-os.system('mkdir ' + job_dir + '/stdout')
-
 # splitting
 num_total_files = len(input_files)
 if args.numJobs==None and args.filesPerJob==None: args.numJobs = 1
@@ -288,35 +298,36 @@ if args.filesPerJob == None:
   N = int(num_files_per_job)
 else:
   N = args.filesPerJob
-
-# prepare input file files
 input_filenames = [] # each entry a filename, and the file is a txt file of input filenames one per line
+if args.useLFN: ext = '.txt' # file location taken raw
+else: ext = '.dat' # file location to be parsed by cmssw cfg file
 for count,set_of_lines in enumerate(grouper(input_files, N, '')):
-  with open(input_file_filename_base+'_'+str(count)+'.dat', 'w') as fi:
+  with open(input_file_filename_base+'_'+str(count)+ext, 'wt') as fi:
     if len(set_of_lines) == 0: continue
     if set_of_lines[0] == '': continue
     for line in set_of_lines:
       if line == '': continue
       fi.write(line.strip()+'\n')
     input_filenames.append(os.path.basename(fi.name))
-  # cmssw_ version of file keeps only filename instead of full path and adds 'file:'
-  with open('cmssw_'+input_file_filename_base+'_'+str(count)+'.dat', 'w') as fi:
-    for line in set_of_lines:
-      if line == '': continue
-      if not args.useLFN:
-        i = line.rfind('/')
-        line = line[i+1:len(line)]
-        fi.write('file:'+line.strip()+'\n')
-      if args.useLFN:
-        fi.write(line.strip()+'\n')
-for filename in input_filenames:
-  os.system('mv ' + filename + ' ' + job_dir + '/infiles/')
-  os.system('mv cmssw_' + filename + ' ' + job_dir + '/infiles/')
 TOTAL_JOBS = len(input_filenames)
+
+# create tranches
+TRANCHE_LIMIT = args.trancheMax
+procs = range(len(input_filenames))
+if TOTAL_JOBS > TRANCHE_LIMIT:
+  infile_tranches = [input_filenames[i:i + TRANCHE_LIMIT] for i in range(0, len(input_filenames), TRANCHE_LIMIT)]
+  proc_tranches = [procs[i:i + TRANCHE_LIMIT] for i in range(0, len(procs), TRANCHE_LIMIT)]
+else:
+  infile_tranches = [input_filenames]
+  proc_tranches = [procs]
+if args.verbose:
+  for i in range(len(infile_tranches)):
+    print("  Tranche "+str(i+1))
+    print("  procs: "+str(list(proc_tranches[i])))
 
 # prepare unpacker script
 template_filename = helper_dir+"/template_"+unpacker_filename
-replaced_filename = unpacker_filename
+new_unpacker_filename = unpacker_filename
 to_replace = {}
 to_replace['__inputfilefilenamebase__'] = input_file_filename_base
 if args.input_local and site == 'hexcms':
@@ -329,12 +340,11 @@ if args.input_dataset:
   to_replace['__redirector__'] = 'root://cmsxrootd.fnal.gov/'
   if args.useLFN: to_replace['__copycommand__'] = 'NULL'
   else: to_replace['__copycommand__'] = 'xrdcp --nopbar'
-use_template_to_replace(template_filename, replaced_filename, to_replace)
-os.system('mv ' + replaced_filename + ' ' + job_dir)
+use_template_to_replace(template_filename, new_unpacker_filename, to_replace)
 
 # prepare stageout script
 template_filename = helper_dir+"/template_"+stageout_filename
-replaced_filename = stageout_filename
+new_stageout_filename = stageout_filename
 to_replace = {}
 to_replace['__finalfile__'] = finalfile_filename
 to_replace['__outputlocation__'] = output_path
@@ -344,22 +354,13 @@ if args.output_local:
 if args.output_cmslpc:
   to_replace['__redirector__'] = 'root://cmseos.fnal.gov/'
   to_replace['__copycommand__'] = 'xrdcp --nopbar'
-use_template_to_replace(template_filename, replaced_filename, to_replace)
-os.system('mv ' + replaced_filename + ' ' + job_dir)
-
-# prepare prebuild area to send with job
-if args.rebuild:
-  print "Setting up src directory (inside ./"+cmssw_prebuild_area+") to ship with job"
-  os.system('./' + helper_dir +'/'+ src_setup_script)
-  print "\nFinished setting up directory to ship with job.\n"
-if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
-  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
+use_template_to_replace(template_filename, new_stageout_filename, to_replace)
 
 # check proxy
 if site == 'hexcms' and args.input_dataset:
   if args.proxy == '':
     subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)
-    proxy_path = (subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)).strip()
+    proxy_path = ((subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)).strip()).decode('utf-8')
   else:
     proxy_path = args.proxy
   if not os.path.isfile(proxy_path):
@@ -372,71 +373,80 @@ if site == 'cmslpc':
   time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
   if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
-# choose modules
-if args.twoprongSB == 'None':
-  constructor = 'default'
-if args.twoprongSB == 'iso':
-  constructor = 'addLooseIso'
-  twoprong_sideband = 'Isolation'
-if args.photonSB == 'None':
-  phoconstructor = 'default'
-if args.photonSB == 'full':
-  phoconstructor = 'addLoose'
-  photon_sideband = 'Full'
-if args.selection == 'None':
-  selection = 'default'
-if args.selection == 'muon':
-  selection = 'muon'
-  selection_text = 'slimmedMuons >= 1'
-if args.selection == 'photon':
-  selection = 'photon'
-  selection_text = 'slimmedPhotons >= 1'
+# define submit file
+subs = []
+for i in range(len(infile_tranches)):
+  if len(infile_tranches)==1: suffix = ''
+  else: suffix = '_tranche'+str(i+1)
+  if args.test: job_dir = 'TestJob_' + args.dir + suffix
+  else: job_dir = 'Job_' + args.dir + suffix
+  sub = htcondor.Submit()
+  sub['executable'] = helper_dir+'/'+executable
+  sub['arguments'] = unpacker_filename+" "+stageout_filename+" $(MY_PROC) "+datamc+" "+args.year
+  if args.lumiMask is None:
+    sub['arguments'] += " None"
+  else:
+    sub['arguments'] += " "+os.path.basename(args.lumiMask)
+  sub['arguments'] += " "+constructor+" "+phoconstructor+" "+selection
+  sub['should_transfer_files'] = 'YES'
+  sub['+JobFlavor'] = 'longlunch'
+  sub['Notification'] = 'Never'
+  if site == 'cmslpc': sub['use_x509userproxy'] = 'true'
+  if site == 'hexcms' and args.input_dataset: sub['x509userproxy'] = os.path.basename(proxy_path)
+  sub['transfer_input_files'] = \
+    job_dir+'/'+unpacker_filename + ", " + \
+    job_dir+'/'+stageout_filename + ", " + \
+    job_dir+'/infiles/'+input_file_filename_base+'_$(MY_PROC).dat' + ", " + \
+    cmssw_prebuild_area+'/CMSSW_10_6_20/src/PhysicsTools' + ", " + \
+    cmssw_prebuild_area+'/CMSSW_10_6_20/src/CommonTools'
+  if not args.lumiMask is None:
+    sub['transfer_input_files'] += ", "+args.lumiMask
+  sub['transfer_output_files'] = '""'
+  sub['initialdir'] = ''
+  sub['JobBatchName'] = args.dir if args.batch is None else args.batch
+  sub['output'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
+  if args.noErr:
+    sub['error'] = '/dev/null'
+  else:
+    sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
+  sub['log'] = job_dir+'/log_$(Cluster).txt'
+  subs.append(sub)
 
-# define submit files
-sub = htcondor.Submit()
-sub['executable'] = helper_dir+'/'+executable
-sub['arguments'] = unpacker_filename+" "+stageout_filename+" $(Process) "+datamc+" "+args.year
-if args.lumiMask is None:
-  sub['arguments'] += " None"
-else:
-  sub['arguments'] += " "+os.path.basename(args.lumiMask)
-sub['arguments'] += " "+constructor+" "+phoconstructor+" "+selection
-sub['should_transfer_files'] = 'YES'
-sub['+JobFlavor'] = 'longlunch'
-sub['Notification'] = 'Never'
-if site == 'cmslpc': sub['use_x509userproxy'] = 'true'
-if site == 'hexcms' and args.input_dataset: sub['x509userproxy'] = os.path.basename(proxy_path)
-sub['transfer_input_files'] = \
-  job_dir+'/'+unpacker_filename + ", " + \
-  job_dir+'/'+stageout_filename + ", " + \
-  job_dir+'/infiles/'+input_file_filename_base+'_$(Process).dat' + ", " + \
-  job_dir+'/infiles/'+'cmssw_'+input_file_filename_base+'_$(Process).dat' + ", " + \
-  cmssw_prebuild_area+'/CMSSW_10_6_20/src/PhysicsTools' + ", " + \
-  cmssw_prebuild_area+'/CMSSW_10_6_20/src/CommonTools'
-if not args.lumiMask is None:
-  sub['transfer_input_files'] += ", "+args.lumiMask
-sub['transfer_output_files'] = '""'
-#sub['on_exit_remove'] = '(ExitBySignal == False) && (ExitCode == 0)'
-#sub['max_retries'] = '3'
-sub['initialdir'] = ''
-sub['JobBatchName'] = args.dir if args.batch is None else args.batch
-sub['output'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
-if args.noErr:
-  sub['error'] = '/dev/null'
-else:
-  sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
-sub['log'] = job_dir+'/log_$(Cluster).txt'
+# make job directory
+for i in range(len(infile_tranches)):
+  if len(infile_tranches)==1: suffix = ''
+  else: suffix = '_tranche'+str(i+1)
+  if args.test: job_dir = 'TestJob_' + args.dir + suffix
+  else: job_dir = 'Job_' + args.dir + suffix
+  if args.test: args.force = True
+  if os.path.isdir("./"+job_dir) and not args.force:
+    raise SystemExit("ERROR: Directory " + job_dir + " already exists. Use option -f to overwrite")
+  if os.path.isdir("./"+job_dir) and args.force:
+    os.system('rm -rf ./' + job_dir)
+  os.system('mkdir ' + job_dir)
+  os.system('mkdir ' + job_dir + '/infiles')
+  os.system('mkdir ' + job_dir + '/stdout')
 
-# copy files to job diretory 
-command = ''
-for a in sys.argv:
-  command += a + ' '
-with open(submit_file_filename, 'w') as f:
-  f.write(sub.__str__())
-  f.write('\n# Command:\n#'+command)
-os.system('mv ' + submit_file_filename + ' ' + job_dir)
-os.system('cp ' + helper_dir +'/'+ executable + ' ' + job_dir)
-
+# copy files to job directory
+for i in range(len(infile_tranches)):
+  if len(infile_tranches)==1: suffix = ''
+  else: suffix = '_tranche'+str(i+1)
+  if args.test: job_dir = 'TestJob_' + args.dir + suffix
+  else: job_dir = 'Job_' + args.dir + suffix
+  for filename in infile_tranches[i]:
+    os.system('mv ' + filename + ' ' + job_dir + '/infiles/')
+  os.system('cp ' + new_unpacker_filename + ' ' + job_dir)
+  os.system('cp ' + new_stageout_filename + ' ' + job_dir)
+  os.system('cp ' + helper_dir +'/'+ executable + ' ' + job_dir)
+  command = ''
+  for a in sys.argv:
+    command += a + ' '
+  with open(submit_file_filename, 'wt') as f:
+    f.write(subs[i].__str__())
+    f.write('\n# Command:\n#'+command)
+  os.system('mv ' + submit_file_filename + ' ' + job_dir)
+os.system('rm ' + new_unpacker_filename)
+os.system('rm ' + new_stageout_filename)
 
 # get the schedd
 coll = htcondor.Collector()
@@ -445,64 +455,97 @@ if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
 if site == 'cmslpc': schedd_ad = sched_query[0]
 schedd = htcondor.Schedd(schedd_ad)
 
+# prepare prebuild area to send with job
+if args.rebuild:
+  print("Setting up src directory (inside ./"+cmssw_prebuild_area+") to ship with job")
+  os.system('./' + helper_dir +'/'+ src_setup_script)
+  print("\nFinished setting up directory to ship with job.\n")
+if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
+  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
+
 # print summary
 if args.output_local: o_assume = 'local'
 if args.output_cmslpc: o_assume = 'cmslpc eos'
 if args.input_local: i_assume = 'local'
 if args.input_cmslpc: i_assume = 'cmslpc eos'
 if args.input_dataset: i_assume = 'official dataset'
-print "Summary"
-print "-------"
-print "Job Directory       :", job_dir
-print "Job Batch Name      :", args.dir if args.batch is None else args.batch
-print "Job Specification   :", args.year +" "+datamc.upper()
+print("Summary")
+print("-------")
+for i in range(len(infile_tranches)):
+  if len(infile_tranches)==1: suffix = ''
+  else: suffix = '_tranche'+str(i+1)
+  if args.test: job_dir = 'TestJob_' + args.dir + suffix
+  else: job_dir = 'Job_' + args.dir + suffix
+  print("Job Directory       :", job_dir)
+print("Job Batch Name      :", args.dir if args.batch is None else args.batch)
+print("Job Specification   :", args.year +" "+datamc.upper())
 if not args.twoprongSB=='None':
-  print "Twoprong Sideband   : " + twoprong_sideband
+  print("Twoprong Sideband   : " + twoprong_sideband)
 if not args.photonSB=='None':
-  print "Photon Sideband     : " + photon_sideband
+  print("Photon Sideband     : " + photon_sideband)
 if not args.selection=='None':
-  print "Preselection        : " + selection_text
-print "Total Jobs          :", str(TOTAL_JOBS)
-print "Total Files         :", str(num_total_files)
-print "Files/Job (approx)  :", str(N)
-print "Input               : " + i_assume
-if len(input_files)>1: print "Example Input File  : " + ((ex_in[:88] + '..') if len(ex_in) > 90 else ex_in)
-else : print "Input File          : " + ((ex_in[:88] + '..') if len(ex_in) > 90 else ex_in)
-print "Output              : " + o_assume
-print "Output Directory    :", output_path
+  print("Preselection        : " + selection_text)
+print("Total Jobs          :", str(TOTAL_JOBS))
+print("Total Files         :", str(num_total_files))
+print("Files/Job (approx)  :", str(N))
+print("Input               : " + i_assume)
+if len(input_files)>1: print("Example Input File  : " + ((ex_in[:88] + '..') if len(ex_in) > 90 else ex_in))
+else : print("Input File          : " + ((ex_in[:88] + '..') if len(ex_in) > 90 else ex_in))
+print("Output              : " + o_assume)
+print("Output Directory    :", output_path)
 if not args.lumiMask is None:
-  print "Lumi Mask           : " + os.path.basename(args.lumiMask)
-print "Schedd              :", schedd_ad["Name"]
-if args.input_dataset: print "Grid Proxy          :", time_left + ' left'
-
-# premature exit for test
-if args.test:
-  print "Just a test, Exiting."
-  sys.exit()
+  print("Lumi Mask           : " + os.path.basename(args.lumiMask))
+print("Schedd              :", schedd_ad["Name"])
+if args.input_dataset: print("Grid Proxy          :", time_left + ' left')
 
 # prompt user to double-check job summary
+if args.test:
+  print("Just a test, Exiting.")
+  sys.exit()
 while True:
-  response = raw_input("Please check summary. [Enter] to proceed with submission, q to quit: ")
+  response = input("Please check summary. [Enter] to proceed with submission, q to quit: ")
   if response == 'q':
-    print "Quitting."
-    os.system('rm -rf '+job_dir)
+    print("Quitting.")
+    for i in range(len(infile_tranches)):
+      if len(infile_tranches)==1: suffix = ''
+      else: suffix = '_tranche'+str(i+1)
+      if args.test: job_dir = 'TestJob_' + args.dir + suffix
+      else: job_dir = 'Job_' + args.dir + suffix
+      os.system('rm -rf '+job_dir)
     sys.exit()
   elif response == '': break
   else: pass
 
 # submit the job
-print "Submitting Jobs ..."
-with schedd.transaction() as txn:
-  cluster_id = sub.queue(txn, count=TOTAL_JOBS)
-  print "ClusterId: ", cluster_id
+print("Submitting Jobs ...")
+cluster_ids = []
+first_procs = []
+for i, tranche in enumerate(infile_tranches):
+  if len(infile_tranches)>1: print('  Submitting Tranche', i+1)
+  total_procs = len(tranche)
+  procs_list = proc_tranches[i]
+  if len(infile_tranches)>1: print('  Total procs ', total_procs)
+  if args.verbose and len(infile_tranches)>1: print('  '+str([e for e in procs_list]))
+  with schedd.transaction() as txn:
+    iterator = subs[i].itemdata("queue 1 MY_PROC in "+", ".join(repr(e) for e in procs_list))
+    result = subs[i].queue_with_itemdata(txn, 1, iterator)
+    cluster_id = result.cluster()
+    cluster_ids.append(cluster_id)
+    first_procs.append(procs_list[0])
 
 # prepare job_info.py file
-template_filename = helper_dir+"/template_"+jobinfo_filename
-replaced_filename = jobinfo_filename
-to_replace = {}
-to_replace['__cluster__'] = str(cluster_id)
-to_replace['__queue__'] = str(TOTAL_JOBS)
-to_replace['__schedd__'] = schedd_ad["Name"]
-to_replace['__output__'] = output_path
-use_template_to_replace(template_filename, replaced_filename, to_replace)
-os.system('mv ' + replaced_filename + ' ' + job_dir)
+for i in range(len(infile_tranches)):
+  if len(infile_tranches)==1: suffix = ''
+  else: suffix = '_tranche'+str(i+1)
+  if args.test: job_dir = 'TestJob_' + args.dir + suffix
+  else: job_dir = 'Job_' + args.dir + suffix
+  template_filename = helper_dir+"/template_"+jobinfo_filename
+  replaced_filename = jobinfo_filename
+  to_replace = {}
+  to_replace['__cluster__'] = str(cluster_ids[i])
+  to_replace['__queue__'] = str(len(infile_tranches[i]))
+  to_replace['__firstproc__'] = str(first_procs[i])
+  to_replace['__schedd__'] = schedd_ad["Name"]
+  to_replace['__output__'] = output_path
+  use_template_to_replace(template_filename, replaced_filename, to_replace)
+  os.system('mv ' + replaced_filename + ' ' + job_dir)

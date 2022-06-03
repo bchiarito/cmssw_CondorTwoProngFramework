@@ -63,7 +63,7 @@ echo ''
 echo '&&& cd to PhysicsTools/PFNano/test/ and bring rootfiles from initial dir &&&'
 cd PhysicsTools/PFNano/test/
 export CMSRUN_DIR=$(pwd)
-mv $INITIAL_DIR/cmssw_infiles_$3.dat .
+mv $INITIAL_DIR/infiles_$3.dat .
 mv $INITIAL_DIR/*.root .
 mv $INITIAL_DIR/Cert_*JSON*.txt .
 echo ''
@@ -72,7 +72,7 @@ pwd
 ls -ldh *
 echo ''
 echo '&&& cmsRun cfg.py &&&'
-cmsRun NANOAOD_$4_$5_cfg.py inputFilesFile=cmssw_infiles_$3.dat goodLumis=$6 maxEvents=-1
+cmsRun NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
 echo ''
 ls -ldh *.root
 echo ''

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import sys
 import hashlib
@@ -16,7 +17,8 @@ def convertToDir(dataset):
   if h<=0 : h = 1000
   if s<=0 : s = 1000
   i = min(u,h,s)
-  return str(dataset[:i])+"_"+str(hashlib.md5(dataset).hexdigest())
+  return str(dataset[:i])+"_"+str(hashlib.md5(dataset.encode('utf-8')).hexdigest())
+  #return str(dataset[:i])+"_"+str(hashlib.md5(dataset).hexdigest())
 
 def convertToString(dataset):
   return dataset.replace('/', '__')
@@ -32,7 +34,7 @@ def process(dataset, dirname):
   if isCached(dataset, dirname):
     raise SystemExit('Dataset Management: Trying to process dataset but dataset is already cached!')
   d = convertToDir(dataset)
-  print "Dataset Management: Invoking DAS ..."
+  print("Dataset Management: Invoking DAS ...")
   files = subprocess.check_output('/cvmfs/cms.cern.ch/common/dasgoclient --query="file dataset='+dataset+'"', shell=True)
   info = subprocess.check_output('/cvmfs/cms.cern.ch/common/dasgoclient --json --query="dataset='+dataset+'"', shell=True)
   parsed_info = json.loads(info)
@@ -44,7 +46,7 @@ def process(dataset, dirname):
   nevents = int(parsed_info['nevents'])
   avg_events_files = int(float(nevents)/nfiles)
   avg_size_files = space*1000/nfiles
-  print "Dataset Management: DAS query Successful."
+  print("Dataset Management: DAS query Successful.")
   os.system('mkdir -p '+dirname+'/'+d)
   with open(dirname+'/'+d+'/'+master_filename, 'w') as f:
     f.write(files)
