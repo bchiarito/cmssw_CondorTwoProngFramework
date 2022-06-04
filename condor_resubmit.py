@@ -70,7 +70,7 @@ with open(args.jobDir+'/'+submit_filename) as f:
   submit_string += "\nJobBatchName = " + batchName
   submit_string += '\nnoop_job = !stringListMember("$(Process)","'+procs_string+'")'
   submit_string += '\nTEMP = $(Process) + ' + str(first_proc)
-  submit_string += '\nMY_PROC = $INT(TEMP)'
+  submit_string += '\nGLOBAL_PROC = $INT(TEMP)'
 
 # make submit object
 sub = htcondor.Submit(submit_string)

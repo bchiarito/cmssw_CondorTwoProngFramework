@@ -101,14 +101,14 @@ help="twoprong sideband: None (default), iso")
 parser.add_argument("--photonSB", default="None", choices=['None'], metavar='CHOICE',
 help="photon sideband (default None)")
 parser.add_argument("--selection", default="None", choices=['None', 'muon', 'photon'], metavar='CHOICE',
-help="event preselection None (default), muon, photon)")
+help="event preselection None (default), muon, photon")
 
 # run specification
 num_options = parser.add_mutually_exclusive_group()
 num_options.add_argument("--numJobs", type=int, metavar='INT',
-help="total number of subjobs in the job (default is 1)")
-num_options.add_argument("--filesPerJob", type=int, metavar='INT',
-help="number of files per subjob")
+help="total number of subjobs in the job")
+num_options.add_argument("--filesPerJob", type=int, metavar='INT', default=1,
+help="number of files per subjob (default is 1)")
 parser.add_argument("--files", default=-1, type=float, metavar='maxFiles',
 help="total files, <1 treated as a fraction e.g. 0.1 means 10%% (default is all)")
 parser.add_argument("--trancheMax", type=int, metavar='INT', default=2500,
@@ -240,7 +240,7 @@ ex_in = example_inputfile
 if args.verbose:
   print("Input files:")
   for input_file in input_files:
-    print('  '+input_file)
+    print('  '+input_file.strip())
 
 # test input
 if args.input_cmslpc:
@@ -291,7 +291,7 @@ if args.output_cmslpc:
 
 # splitting
 num_total_files = len(input_files)
-if args.numJobs==None and args.filesPerJob==None: args.numJobs = 1
+if args.numJobs==None and args.filesPerJob==None: args.filesPerJob = 1
 if args.filesPerJob == None:
   num_total_jobs = args.numJobs
   num_files_per_job = math.ceil(num_total_files / float(num_total_jobs))
@@ -382,7 +382,7 @@ for i in range(len(infile_tranches)):
   else: job_dir = 'Job_' + args.dir + suffix
   sub = htcondor.Submit()
   sub['executable'] = helper_dir+'/'+executable
-  sub['arguments'] = unpacker_filename+" "+stageout_filename+" $(MY_PROC) "+datamc+" "+args.year
+  sub['arguments'] = unpacker_filename+" "+stageout_filename+" $(GLOBAL_PROC) "+datamc+" "+args.year
   if args.lumiMask is None:
     sub['arguments'] += " None"
   else:
@@ -396,7 +396,7 @@ for i in range(len(infile_tranches)):
   sub['transfer_input_files'] = \
     job_dir+'/'+unpacker_filename + ", " + \
     job_dir+'/'+stageout_filename + ", " + \
-    job_dir+'/infiles/'+input_file_filename_base+'_$(MY_PROC).dat' + ", " + \
+    job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC).dat' + ", " + \
     cmssw_prebuild_area+'/CMSSW_10_6_20/src/PhysicsTools' + ", " + \
     cmssw_prebuild_area+'/CMSSW_10_6_20/src/CommonTools'
   if not args.lumiMask is None:
@@ -521,13 +521,12 @@ print("Submitting Jobs ...")
 cluster_ids = []
 first_procs = []
 for i, tranche in enumerate(infile_tranches):
-  if len(infile_tranches)>1: print('  Submitting Tranche', i+1)
   total_procs = len(tranche)
   procs_list = proc_tranches[i]
-  if len(infile_tranches)>1: print('  Total procs ', total_procs)
+  if len(infile_tranches)>1: print('  Submitting Tranche', i+1, ': procs', total_procs)
   if args.verbose and len(infile_tranches)>1: print('  '+str([e for e in procs_list]))
   with schedd.transaction() as txn:
-    iterator = subs[i].itemdata("queue 1 MY_PROC in "+", ".join(repr(e) for e in procs_list))
+    iterator = subs[i].itemdata("queue 1 GLOBAL_PROC in "+", ".join(repr(e) for e in procs_list))
     result = subs[i].queue_with_itemdata(txn, 1, iterator)
     cluster_id = result.cluster()
     cluster_ids.append(cluster_id)
