@@ -60,7 +60,7 @@ for a, b in re.findall(r'(\d+)-?(\d*)', args.procs):
   procs.extend(range(int(a), int(a)+1 if b=='' else int(b)+1))
 procs_string = ''
 for p in procs:
- procs_string += str(p)+','
+  procs_string += str(p)+','
 procs_string = procs_string[:-1]
 
 # create new submit jdl
@@ -78,7 +78,7 @@ sub = htcondor.Submit(submit_string)
 # move/delete old output
 for proc in procs:
   base = 'NANOAOD_TwoProng_'
-  jobid = str(proc)
+  jobid = str(proc + first_proc)
   file_to_remove = base + jobid + '.root'
   if output_eos:
     rm_command = 'eos root://cmseos.fnal.gov rm ' + output_area + '/' + file_to_remove + ' 2> /dev/null'

@@ -19,6 +19,7 @@ if hasattr(__builtins__, 'raw_input'):
 # constants
 helper_dir = 'helper'
 executable = 'condor_execute.sh'
+executable_fast = 'condor_execute_fast.sh'
 src_setup_script = 'prebuild_setup.sh' # also in unit test scripts
 submit_file_filename = 'submit_file.jdl'
 input_file_filename_base = 'infiles' # also in executable
@@ -111,14 +112,18 @@ num_options.add_argument("--filesPerJob", type=int, metavar='INT', default=1,
 help="number of files per subjob (default is 1)")
 parser.add_argument("--files", default=-1, type=float, metavar='maxFiles',
 help="total files, <1 treated as a fraction e.g. 0.1 means 10%% (default is all)")
-parser.add_argument("--trancheMax", type=int, metavar='INT', default=2500,
+parser.add_argument("--trancheMax", type=int, metavar='INT', default=20000,
 help="max subjobs in a tranche")
+parser.add_argument("--scheddLimit", type=int, metavar='INT', default=-1,
+help="maximum total idle + running on schedd")
 parser.add_argument("--noErr", default=False, action="store_true",
 help="do not save stderr in log files")
 parser.add_argument("--useLFN", default=False, action="store_true",
 help="do not use xrdcp, supply LFN directly")
 parser.add_argument("--proxy", default='',
 help="location of proxy file, only used on hexcms")
+parser.add_argument("--noPayload", default=False, action="store_true",
+help="for testing purposes")
 
 # convenience
 parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
@@ -176,6 +181,11 @@ if args.selection == 'photon':
 maxfiles = args.files
 if args.files < 1: percentmax = True
 else: percentmax = False
+
+# schedd limit
+if args.scheddLimit == -1:
+  if site == 'hexcms': args.scheddLimit = 500
+  if site == 'cmslpc': args.scheddLimit = 2000
 
 # check input
 input_not_set = False
@@ -381,7 +391,7 @@ for i in range(len(infile_tranches)):
   if args.test: job_dir = 'TestJob_' + args.dir + suffix
   else: job_dir = 'Job_' + args.dir + suffix
   sub = htcondor.Submit()
-  sub['executable'] = helper_dir+'/'+executable
+  sub['executable'] = helper_dir+'/'+executable if not args.noPayload else helper_dir+'/'+executable_fast
   sub['arguments'] = unpacker_filename+" "+stageout_filename+" $(GLOBAL_PROC) "+datamc+" "+args.year
   if args.lumiMask is None:
     sub['arguments'] += " None"
@@ -410,6 +420,7 @@ for i in range(len(infile_tranches)):
   else:
     sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
   sub['log'] = job_dir+'/log_$(Cluster).txt'
+  if not args.scheddLimit==-1: sub['max_materialize'] = str(args.scheddLimit)
   subs.append(sub)
 
 # make job directory
@@ -437,7 +448,8 @@ for i in range(len(infile_tranches)):
     os.system('mv ' + filename + ' ' + job_dir + '/infiles/')
   os.system('cp ' + new_unpacker_filename + ' ' + job_dir)
   os.system('cp ' + new_stageout_filename + ' ' + job_dir)
-  os.system('cp ' + helper_dir +'/'+ executable + ' ' + job_dir)
+  if not args.noPayload: os.system('cp ' + helper_dir +'/'+ executable + ' ' + job_dir)
+  else: os.system('cp ' + helper_dir +'/'+ executable_fast + ' ' + job_dir)
   command = ''
   for a in sys.argv:
     command += a + ' '
@@ -447,13 +459,6 @@ for i in range(len(infile_tranches)):
   os.system('mv ' + submit_file_filename + ' ' + job_dir)
 os.system('rm ' + new_unpacker_filename)
 os.system('rm ' + new_stageout_filename)
-
-# get the schedd
-coll = htcondor.Collector()
-sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
-if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
-if site == 'cmslpc': schedd_ad = sched_query[0]
-schedd = htcondor.Schedd(schedd_ad)
 
 # prepare prebuild area to send with job
 if args.rebuild:
@@ -495,7 +500,7 @@ print("Output              : " + o_assume)
 print("Output Directory    :", output_path)
 if not args.lumiMask is None:
   print("Lumi Mask           : " + os.path.basename(args.lumiMask))
-print("Schedd              :", schedd_ad["Name"])
+#print("Schedd              :", schedd_ad["Name"])
 if args.input_dataset: print("Grid Proxy          :", time_left + ' left')
 
 # prompt user to double-check job summary
@@ -516,6 +521,14 @@ while True:
   elif response == '': break
   else: pass
 
+'''
+# get the schedd
+coll = htcondor.Collector()
+sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
+if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
+if site == 'cmslpc': schedd_ad = sched_query[0]
+schedd = htcondor.Schedd(schedd_ad)
+
 # submit the job
 print("Submitting Jobs ...")
 cluster_ids = []
@@ -531,6 +544,33 @@ for i, tranche in enumerate(infile_tranches):
     cluster_id = result.cluster()
     cluster_ids.append(cluster_id)
     first_procs.append(procs_list[0])
+'''
+
+# get the schedd
+# new submit
+cluster_ids = []
+first_procs = []
+for i, tranche in enumerate(infile_tranches):
+  coll = htcondor.Collector()
+  sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
+  if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
+  if site == 'cmslpc': schedd_ad = sched_query[0]
+  schedd = htcondor.Schedd(schedd_ad)
+
+  total_procs = len(tranche)
+  procs_list = proc_tranches[i]
+  if len(infile_tranches)>1: print('  Submitting Tranche', i+1, ': procs', total_procs)
+  if args.verbose and len(infile_tranches)>1: print('  '+str([e for e in procs_list]))
+
+  #itemdata = [{"input_file": path.as_posix(), "input_file_name": path.name} for path in input_files]
+  #result = schedd.submit(subs[i],itemdata = iter(itemdata))
+  iterator = subs[i].itemdata("queue 1 GLOBAL_PROC in "+", ".join(repr(e) for e in procs_list))
+  result = schedd.submit(subs[i],itemdata = iterator)
+
+  cluster_id = result.cluster()
+  cluster_ids.append(cluster_id)
+  first_procs.append(procs_list[0])
+  print('  ClusterID', cluster_id)
 
 # prepare job_info.py file
 for i in range(len(infile_tranches)):
