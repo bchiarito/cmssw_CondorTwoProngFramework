@@ -66,78 +66,82 @@ except ImportError as err:
     raise err
 
 # command line options
-parser = argparse.ArgumentParser(description="", usage="python %(prog)s INPUT OUTPUT")
+parser = argparse.ArgumentParser(description="", usage="./%(prog)s INPUT OUTPUT [--data/mc] -y ULYY -l JSON -d DIR")
 
 # input/output
-parser.add_argument("input", metavar='INPUT',
+io_args = parser.add_argument_group('input/output options')
+io_args.add_argument("input", metavar='INPUT',
 help="Absolute path to local directory/file, cmslpc eos storage (/store/user/...), \
 text file (end in .txt) with one file location per line, or dataset name (/*/*/MINIAOD(SIM)).")
-input_options = parser.add_mutually_exclusive_group()
+input_options = io_args.add_mutually_exclusive_group()
 input_options.add_argument("--input_local", action="store_true",
 help=argparse.SUPPRESS)
 input_options.add_argument("--input_cmslpc", action="store_true",
 help=argparse.SUPPRESS)
 input_options.add_argument("--input_dataset", action="store_true",
 help=argparse.SUPPRESS)
-parser.add_argument("output", metavar='OUTPUT',
+io_args.add_argument("output", metavar='OUTPUT',
 help="Absoulte path to local directory, or cmslpc eos storage (/store/user/...).")
-output_options = parser.add_mutually_exclusive_group()
+output_options = io_args.add_mutually_exclusive_group()
 output_options.add_argument("--output_local", action="store_true",
 help=argparse.SUPPRESS)
 output_options.add_argument("--output_cmslpc", action="store_true",
 help=argparse.SUPPRESS)
 
 # execution specification
-datamc_options = parser.add_mutually_exclusive_group()
+exec_args = parser.add_argument_group('execution options')
+datamc_options = exec_args.add_mutually_exclusive_group()
 datamc_options.add_argument("--mc", action="store_true",
 help="running on mc (default)")
 datamc_options.add_argument("--data", action="store_true",
 help="running on data")
-parser.add_argument("-y", "--year", default="UL18", choices=['UL16','UL17','UL18'], metavar='ULYY',
+exec_args.add_argument("-y", "--year", default="UL18", choices=['UL16','UL17','UL18'], metavar='ULYY',
 help="prescription to follow: UL18 (default), UL17, UL16")
-parser.add_argument("-l", "--lumiMask", default=None, metavar='', dest='lumiMask',
+exec_args.add_argument("-l", "--lumiMask", default=None, metavar='', dest='lumiMask',
 help="path to lumi mask json file")
-parser.add_argument("--twoprongSB", default="None", choices=['None','iso','sym','both'], metavar='CHOICE',
-help="twoprong sideband: None (default), iso")
-parser.add_argument("--photonSB", default="None", choices=['None'], metavar='CHOICE',
-help="photon sideband (default None)")
-parser.add_argument("--selection", default="None", choices=['None', 'muon', 'photon'], metavar='CHOICE',
-help="event preselection None (default), muon, photon")
+exec_args.add_argument("--twoprongSB", default="None", choices=['None','iso','sym','both'], metavar='CHOICE',
+help="include twoprong sideband: None (default), iso")
+exec_args.add_argument("--photonSB", default="None", choices=['None'], metavar='CHOICE',
+help="include photon sideband (default None)")
+exec_args.add_argument("--selection", default="None", choices=['None', 'muon', 'photon'], metavar='CHOICE',
+help="apply event preselection None (default), muon, photon")
+exec_args.add_argument("--noPayload", default=False, action="store_true",
+help="for testing purposes")
 
 # run specification
-num_options = parser.add_mutually_exclusive_group()
+run_args = parser.add_argument_group('run options')
+run_args.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
+help="name of job directory, created in current directory")
+run_args.add_argument("-b", "--batch", metavar='STR',
+help="displays when using condor_q -batch")
+num_options = run_args.add_mutually_exclusive_group()
 num_options.add_argument("--numJobs", type=int, metavar='INT',
 help="total number of subjobs in the job")
 num_options.add_argument("--filesPerJob", type=int, metavar='INT', default=1,
 help="number of files per subjob (default is 1)")
-parser.add_argument("--files", default=-1, type=float, metavar='maxFiles',
+run_args.add_argument("--files", default=-1, type=float, metavar='maxFiles',
 help="total files, <1 treated as a fraction e.g. 0.1 means 10%% (default is all)")
-parser.add_argument("--trancheMax", type=int, metavar='INT', default=20000,
-help="max subjobs in a tranche")
-parser.add_argument("--scheddLimit", type=int, metavar='INT', default=-1,
+run_args.add_argument("--trancheMax", type=int, metavar='INT', default=20000,
+help="max subjobs before splitting into tranches")
+run_args.add_argument("--scheddLimit", type=int, metavar='INT', default=-1,
 help="maximum total idle + running on schedd")
-parser.add_argument("--noErr", default=False, action="store_true",
-help="do not save stderr in log files")
-parser.add_argument("--useLFN", default=False, action="store_true",
-help="do not use xrdcp, supply LFN directly")
-parser.add_argument("--proxy", default='',
-help="location of proxy file, only used on hexcms")
-parser.add_argument("--noPayload", default=False, action="store_true",
-help="for testing purposes")
+run_args.add_argument("--useLFN", default=False, action="store_true",
+help="do not use xrdcp, supply LFN directly to cmssw cfg")
 
 # convenience
-parser.add_argument("-d", "--dir", default='condor_'+date.today().strftime("%b-%d-%Y"),
-help="name of job directory, created in current directory")
-parser.add_argument("-b", "--batch", metavar='STR',
-help="displays when using condor_q -batch")
-parser.add_argument("-f", "--force", action="store_true",
+other_args = parser.add_argument_group('misc options')
+other_args.add_argument("-f", "--force", action="store_true",
 help="overwrite job directory if it already exists")
-parser.add_argument("--rebuild", default=False, action="store_true",
+other_args.add_argument("--rebuild", default=False, action="store_true",
 help="remake cmssw prebuild area needed to ship with job")
-parser.add_argument("-t", "--test", default=False, action="store_true",
+other_args.add_argument("-t", "--test", default=False, action="store_true",
 help="don't submit condor jobs but do all other steps")
-parser.add_argument("-v", "--verbose", default=False, action="store_true",
+other_args.add_argument("-v", "--verbose", default=False, action="store_true",
 help="activate debug output")
+other_args.add_argument("--proxy", default='',
+help="location of proxy file, only used on hexcms")
+other_args.add_argument("--noErr", default=False, action="store_true",
+help="do not save stderr in log files")
 
 # end command line options
 args = parser.parse_args()
@@ -521,7 +525,6 @@ while True:
   elif response == '': break
   else: pass
 
-'''
 # get the schedd
 coll = htcondor.Collector()
 sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
@@ -529,8 +532,7 @@ if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
 if site == 'cmslpc': schedd_ad = sched_query[0]
 schedd = htcondor.Schedd(schedd_ad)
 
-# submit the job
-print("Submitting Jobs ...")
+# submit
 cluster_ids = []
 first_procs = []
 for i, tranche in enumerate(infile_tranches):
@@ -538,35 +540,8 @@ for i, tranche in enumerate(infile_tranches):
   procs_list = proc_tranches[i]
   if len(infile_tranches)>1: print('  Submitting Tranche', i+1, ': procs', total_procs)
   if args.verbose and len(infile_tranches)>1: print('  '+str([e for e in procs_list]))
-  with schedd.transaction() as txn:
-    iterator = subs[i].itemdata("queue 1 GLOBAL_PROC in "+", ".join(repr(e) for e in procs_list))
-    result = subs[i].queue_with_itemdata(txn, 1, iterator)
-    cluster_id = result.cluster()
-    cluster_ids.append(cluster_id)
-    first_procs.append(procs_list[0])
-'''
-
-# get the schedd
-# new submit
-cluster_ids = []
-first_procs = []
-for i, tranche in enumerate(infile_tranches):
-  coll = htcondor.Collector()
-  sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
-  if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
-  if site == 'cmslpc': schedd_ad = sched_query[0]
-  schedd = htcondor.Schedd(schedd_ad)
-
-  total_procs = len(tranche)
-  procs_list = proc_tranches[i]
-  if len(infile_tranches)>1: print('  Submitting Tranche', i+1, ': procs', total_procs)
-  if args.verbose and len(infile_tranches)>1: print('  '+str([e for e in procs_list]))
-
-  #itemdata = [{"input_file": path.as_posix(), "input_file_name": path.name} for path in input_files]
-  #result = schedd.submit(subs[i],itemdata = iter(itemdata))
   iterator = subs[i].itemdata("queue 1 GLOBAL_PROC in "+", ".join(repr(e) for e in procs_list))
   result = schedd.submit(subs[i],itemdata = iterator)
-
   cluster_id = result.cluster()
   cluster_ids.append(cluster_id)
   first_procs.append(procs_list[0])
