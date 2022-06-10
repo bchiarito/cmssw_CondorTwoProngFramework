@@ -237,7 +237,7 @@ lines = []
 aborted_jobs = []
 for jobNum in subjobs:
   subjob = subjobs[jobNum]
-  status = subjob.get('status','')
+  status = subjob.get('status','unsubmitted')
   reason = subjob.get('reason','')
   reason = reason[0:80]
   if status == 'aborted':  # determines if the job was aborted
@@ -252,7 +252,7 @@ for jobNum in subjobs:
     totalTime = ''
   size = subjob.get('size', "")
   if status=='finished' and size=='': status = 'fin w/o output'
-  if args.onlyFinished and (status=='submitted' or status=='running'): continue
+  if args.onlyFinished and (status=='submitted' or status=='running' or status=='unsubmitted'): continue
   if args.onlyError and (status=='submitted' or status=='running' or status=='finished'): continue
   if args.notFinished and (status=='finished'): continue
   resubs = subjob.get('resubmitted', '')
