@@ -121,8 +121,8 @@ num_options.add_argument("--filesPerJob", type=int, metavar='INT', default=1,
 help="number of files per subjob (default is 1)")
 run_args.add_argument("--files", default=-1, type=float, metavar='maxFiles',
 help="total files, <1 treated as a fraction e.g. 0.1 means 10%% (default is all)")
-run_args.add_argument("--trancheMax", type=int, metavar='INT', default=20000,
-help="max subjobs before splitting into tranches")
+run_args.add_argument("--trancheMax", type=int, metavar='INT', default=50000,
+help=argparse.SUPPRESS)
 run_args.add_argument("--scheddLimit", type=int, metavar='INT', default=-1,
 help="maximum total idle + running on schedd")
 run_args.add_argument("--useLFN", default=False, action="store_true",
@@ -188,8 +188,8 @@ else: percentmax = False
 
 # schedd limit
 if args.scheddLimit == -1:
-  if site == 'hexcms': args.scheddLimit = 500
-  if site == 'cmslpc': args.scheddLimit = 2000
+  if site == 'hexcms': args.scheddLimit = 350
+  if site == 'cmslpc': args.scheddLimit = 1500
 
 # check input
 input_not_set = False
@@ -382,7 +382,7 @@ if site == 'hexcms' and args.input_dataset:
   os.system('cp '+proxy_path+' .')
   proxy_filename = os.path.basename(proxy_path)
   time_left = str(timedelta(seconds=int(subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script_timeleft, shell=True))))
-  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! In new shell, renew with voms-proxy-init -voms cms")
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 if site == 'cmslpc':
   time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
   if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
