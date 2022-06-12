@@ -165,7 +165,10 @@ for resubmit_cluster,procs in job.resubmits:
   if args.verbose: print("DEBUG: found resubmit clusterid:", resubmit_cluster)
   regex = r"\{[^{}]*?(\{.*?\})?[^{}]*?\}"
   wait_command = 'condor_wait -echo:JSON -wait 0 '+args.jobDir+'/log_'+resubmit_cluster+'.txt'
-  output = subprocess.check_output(wait_command, shell=True)
+  try:
+    output = subprocess.check_output(wait_command, shell=True)
+  except subprocess.CalledProcessError as e:
+    output = e.output
   if args.verbose: print("DEBUG: job report file created")
   resubmits += 1
   matches = re.finditer(regex, output.decode('utf-8'), re.MULTILINE | re.DOTALL)
@@ -173,8 +176,8 @@ for resubmit_cluster,procs in job.resubmits:
     block = json.loads(match.group(0))
     date = time.strptime(str(block['EventTime']), '%Y-%m-%dT%H:%M:%S')
     t = timegm(date)
-    # skip noop_jobs
-    if not int(block['Proc']) in procs: continue
+    if not 'Proc' in block: continue # skip uninteresting
+    if not int(block['Proc']) in procs: continue # skip noop_jobs
     if block['MyType'] == 'SubmitEvent':
       subjobs[int(block['Proc'])]['resubmitted'] += 1
       subjobs[int(block['Proc'])]['start_time'] = date
