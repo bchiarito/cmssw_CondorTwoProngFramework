@@ -256,7 +256,7 @@ for jobNum in subjobs:
   size = subjob.get('size', "")
   if status=='finished' and size=='': status = 'fin w/o output'
   if args.onlyFinished and (status=='submitted' or status=='running' or status=='unsubmitted'): continue
-  if args.onlyError and (status=='submitted' or status=='running' or status=='finished'): continue
+  if args.onlyError and (status=='submitted' or status=='running' or status=='finished' or status=='unsubmitted'): continue
   if args.notFinished and (status=='finished'): continue
   resubs = subjob.get('resubmitted', '')
   if resubs == 0: resubs = ''
