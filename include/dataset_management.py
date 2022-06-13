@@ -35,8 +35,8 @@ def process(dataset, dirname):
     raise SystemExit('Dataset Management: Trying to process dataset but dataset is already cached!')
   d = convertToDir(dataset)
   print("Dataset Management: Invoking DAS ...")
-  files = subprocess.check_output('/cvmfs/cms.cern.ch/common/dasgoclient --query="file dataset='+dataset+'"', shell=True)
-  info = subprocess.check_output('/cvmfs/cms.cern.ch/common/dasgoclient --json --query="dataset='+dataset+'"', shell=True)
+  files = subprocess.check_output('/cvmfs/cms.cern.ch/common/dasgoclient --query="file dataset='+dataset+'"', shell=True).decode('utf-8')
+  info = subprocess.check_output('/cvmfs/cms.cern.ch/common/dasgoclient --json --query="dataset='+dataset+'"', shell=True).decode('utf-8')
   parsed_info = json.loads(info)
   if not parsed_info[2]['das']['services'][0] == "dbs3:filesummaries":
     raise SystemExit('Dataset Management: Something wrong parsing dataset json query results! (sometimes just try again) \nDump:\n'+json.dumps(parsed_info,indent=2))
