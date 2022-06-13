@@ -48,9 +48,9 @@ def process(dataset, dirname):
   avg_size_files = space*1000/nfiles
   print("Dataset Management: DAS query Successful.")
   os.system('mkdir -p '+dirname+'/'+d)
-  with open(dirname+'/'+d+'/'+master_filename, 'w') as f:
+  with open(dirname+'/'+d+'/'+master_filename, 'wt') as f:
     f.write(files)
-  with open(dirname+'/'+d+'/'+info_filename, 'w') as f:
+  with open(dirname+'/'+d+'/'+info_filename, 'wt') as f:
     f.write('Dataset: '+dataset)
     f.write('\nSize: '+str(round(space,1))+' TB')
     f.write('\nFiles: '+'{:,}'.format(nfiles))
@@ -64,9 +64,9 @@ def getFiles(dataset, dirname, maxFiles):
   d = convertToDir(dataset)
   files = []
   if maxFiles < 1:
-    totalfiles = len(open(dirname+'/'+d+'/'+master_filename, 'r').readlines())
+    totalfiles = len(open(dirname+'/'+d+'/'+master_filename, 'rt').readlines())
     maxFiles = int(maxFiles * totalfiles)
-  with open(dirname+'/'+d+'/'+master_filename, 'r') as f:
+  with open(dirname+'/'+d+'/'+master_filename, 'rt') as f:
     for line in f:
       files.append(line)
       if len(files) == maxFiles: break
