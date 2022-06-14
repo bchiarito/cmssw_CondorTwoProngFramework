@@ -24,7 +24,7 @@ $ ./condor_submit.py --help
 ```
 ## checking job status
 
-An executable script ``condor_status.py`` is provided, but the following options can also be used if it fails for some reason or other
+An executable script ``condor_status.py`` is provided, but the following options can also be used
 ```
 $ condor_wait -status <path/to/logfile>
 $ eosls -lh </full/path/to/output/directory>
