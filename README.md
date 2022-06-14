@@ -20,7 +20,7 @@ Currently only works with UL18 prescription
 
 For instructions, run:
 ```
-$ python condor_submit.py --help
+$ ./condor_submit.py --help
 ```
 ## checking job status
 
