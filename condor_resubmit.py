@@ -8,11 +8,15 @@ import json
 import time
 import socket
 from calendar import timegm
+from datetime import datetime, timedelta, date
 import datetime
 import socket
 
 # constants
 submit_filename = 'submit_file.jdl'
+helper_dir = 'helper'
+hexcms_proxy_script = 'hexcms_proxy_setup.sh'
+hexcms_proxy_script_timeleft = 'hexcms_proxy_timeleft.sh'
 
 # get site
 hostname = socket.gethostname()
@@ -37,6 +41,7 @@ parser.add_argument("jobDir",help="the condor_submit.py job directory")
 parser.add_argument("procs",help="Process numbers to resubmit, e.g.: 1-3,5,6,7")
 parser.add_argument("--batch",help="JobBatchName parameter, displays when using condor_q -batch")
 parser.add_argument("-v", "--verbose", default=False, action="store_true",help="turn on debug messages")
+parser.add_argument("--proxy", default='', help="location of proxy file, only used on hexcms")
 args = parser.parse_args()
 
 # import job
@@ -50,6 +55,23 @@ schedd_name = job.schedd_name
 output_area = job.output
 if output_area[0:7] == '/store/': output_eos = True
 else: output_eos = False
+
+# check proxy
+if site == 'hexcms':
+  if args.proxy == '':
+    subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)
+    proxy_path = ((subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)).strip()).decode('utf-8')
+  else:
+    proxy_path = args.proxy
+  if not os.path.isfile(proxy_path):
+    raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-init -voms cms")
+  os.system('cp '+proxy_path+' .')
+  proxy_filename = os.path.basename(proxy_path)
+  time_left = str(timedelta(seconds=int(subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script_timeleft, shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
+if site == 'cmslpc':
+  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
 # get the schedd
 if args.verbose: print("DEBUG: Get Schedd")
