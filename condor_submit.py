@@ -186,7 +186,7 @@ maxfiles = args.files
 if args.files < 1: percentmax = True
 else: percentmax = False
 
-# schedd limit
+# determine schedd limit
 if args.scheddLimit == -1:
   if site == 'hexcms': args.scheddLimit = 350
   if site == 'cmslpc': args.scheddLimit = 1500
@@ -201,6 +201,23 @@ if input_not_set and site == "hexcms": args.input_local = True
 if input_not_set and site == "cmslpc": args.input_cmslpc = True
 input_files = [] # each entry a file location
 s = args.input
+
+# check proxy
+if site == 'hexcms' and args.input_dataset:
+  if args.proxy == '':
+    subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)
+    proxy_path = ((subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)).strip()).decode('utf-8')
+  else:
+    proxy_path = args.proxy
+  if not os.path.isfile(proxy_path):
+    raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-init -voms cms")
+  os.system('cp '+proxy_path+' .')
+  proxy_filename = os.path.basename(proxy_path)
+  time_left = str(timedelta(seconds=int(subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script_timeleft, shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
+if site == 'cmslpc':
+  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
 # input is .txt file
 if s[len(s)-4:len(s)] == ".txt":
@@ -369,23 +386,6 @@ if args.output_cmslpc:
   to_replace['__redirector__'] = 'root://cmseos.fnal.gov/'
   to_replace['__copycommand__'] = 'xrdcp --nopbar'
 use_template_to_replace(template_filename, new_stageout_filename, to_replace)
-
-# check proxy
-if site == 'hexcms' and args.input_dataset:
-  if args.proxy == '':
-    subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)
-    proxy_path = ((subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)).strip()).decode('utf-8')
-  else:
-    proxy_path = args.proxy
-  if not os.path.isfile(proxy_path):
-    raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-init -voms cms")
-  os.system('cp '+proxy_path+' .')
-  proxy_filename = os.path.basename(proxy_path)
-  time_left = str(timedelta(seconds=int(subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script_timeleft, shell=True))))
-  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
-if site == 'cmslpc':
-  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
-  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
 # define submit file
 subs = []
