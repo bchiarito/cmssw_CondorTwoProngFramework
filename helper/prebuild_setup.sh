@@ -8,5 +8,5 @@ cd prebuild
 scramv1 project CMSSW CMSSW_10_6_20
 cd CMSSW_10_6_20/src
 eval `scramv1 runtime -sh`
-git clone https://github.com/bchiarito/cmssw_CustomPFNanoTwoProng.git .
+git clone -b set_of_tweaks https://github.com/bchiarito/cmssw_CustomPFNanoTwoProng.git .
 #scram b -j 10
