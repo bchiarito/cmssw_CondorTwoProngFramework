@@ -66,7 +66,7 @@ except ImportError as err:
     raise err
 
 # command line options
-parser = argparse.ArgumentParser(description="", usage="./%(prog)s INPUT OUTPUT [--data/mc] -y ULYY -l JSON -d DIR")
+parser = argparse.ArgumentParser(description="", usage="./%(prog)s INPUT OUTPUT [--data/mc/sigRes/sigNonRes] -y ULYY -l JSON -d DIR")
 
 # input/output
 io_args = parser.add_argument_group('input/output options')
@@ -91,10 +91,14 @@ help=argparse.SUPPRESS)
 # execution specification
 exec_args = parser.add_argument_group('execution options')
 datamc_options = exec_args.add_mutually_exclusive_group()
-datamc_options.add_argument("--mc", action="store_true",
-help="running on mc (default)")
-datamc_options.add_argument("--data", action="store_true",
+datamc_options.add_argument("--data", action="store_true", default=False,
 help="running on data")
+datamc_options.add_argument("--mc", action="store_true", default=False, 
+help="running on bkg mc")
+datamc_options.add_argument("--sigRes", action="store_true", default=False, 
+help="running on resonant signal mc")
+datamc_options.add_argument("--sigNonRes", action="store_true", default=False,
+help="running on nonresonant signal mc")
 exec_args.add_argument("-y", "--year", default="UL18", choices=['UL16','UL17','UL18'], metavar='ULYY',
 help="prescription to follow: UL18 (default), UL17, UL16")
 exec_args.add_argument("-l", "--lumiMask", default=None, metavar='', dest='lumiMask',
@@ -147,12 +151,16 @@ help="do not save stderr in log files")
 args = parser.parse_args()
 
 # check data/mc
-if not args.mc and not args.data: args.mc = True
+print(args.mc, args.data, args.sigRes, args.sigNonRes)
+#print(args.mc, args.data)
 if args.mc: datamc = "mc"
 elif args.data: datamc = "data"
-if args.mc and not args.lumiMask == None:
+elif args.sigRes: datamc = "sigRes"
+elif args.sigNonRes: datamc = "sigNonRes"
+else: raise SystemExit("Missing Option: Specification of --data / --mc / --sigRes / --sigNonRes required!")
+if datamc != 'data' and not args.lumiMask == None:
   raise SystemExit("Configuration Error: Using lumi mask with MC!")
-if args.data and args.lumiMask == None:
+if datamc == 'data' and args.lumiMask == None:
   raise SystemExit("Configuration Error: Running on data, but provided no lumi mask!")
 
 # check year

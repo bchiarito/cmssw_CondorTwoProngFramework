@@ -4,6 +4,7 @@ echo ">>> Running on: `uname -a`"
 echo ">>> System software: `cat /etc/redhat-release`"
 echo ""
 echo "&&& Here there are all the input arguments &&&"
+echo "&&& unpacker stageout proc mc/data year lumi twoprongSB photonSB selection &&&"
 echo $@
 export INITIAL_DIR=$(pwd)
 echo ''
@@ -72,7 +73,17 @@ pwd
 ls -ldh *
 echo ''
 echo '&&& cmsRun cfg.py &&&'
-cmsRun NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+if [ $4 == "data" ]; then
+  cmsRun NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+elif [ $4 == "mc" ]; then
+  cmsRun NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+elif [ $4 == "sigRes" ]; then
+  cmsRun NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+elif [ $4 == "sigNonRes" ]; then
+  cmsRun NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+else
+  echo '&&& ERROR! Could not determine data/mc/signal !!! &&&'
+fi
 echo ''
 ls -ldh *.root
 echo ''
@@ -81,7 +92,17 @@ echo ''
 echo '&&& Run NanoAODTools postprocessor &&&'
 mv ../../../PhysicsTools/NanoAODTools/test/dropPF.txt .
 mv ../../../PhysicsTools/NanoAODTools/test/copy_tree.py .
-python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.twoprongModule twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
+if [ $4 == "data" ]; then
+  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main filtersConstr_$5,twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
+elif [ $4 == "mc" ]; then
+  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
+elif [ $4 == "sigRes" ]; then
+  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main genpartConstr_res,twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
+elif [ $4 == "sigNonRes" ]; then
+  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main genpartConstr_nonres,twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
+else
+  echo '&&& ERROR! Could not determine data/mc/signal !!! &&&'
+fi
 echo ''
 echo '&&& Run copy_tree.py &&&'
 python copy_tree.py NanoAOD_Skim.root
