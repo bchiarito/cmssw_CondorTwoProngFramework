@@ -151,8 +151,6 @@ help="do not save stderr in log files")
 args = parser.parse_args()
 
 # check data/mc
-print(args.mc, args.data, args.sigRes, args.sigNonRes)
-#print(args.mc, args.data)
 if args.mc: datamc = "mc"
 elif args.data: datamc = "data"
 elif args.sigRes: datamc = "sigRes"
@@ -239,7 +237,7 @@ if s[len(s)-4:len(s)] == ".txt":
 # input is local
 elif args.input_local:
   if os.path.isfile(args.input):
-    input_files.append(args.input)
+    input_files.append(os.path.abspath(args.input))
   if os.path.isdir(args.input):
     if args.input[len(args.input)-1] == '/': args.input = args.input[0:len(args.input)-1]
     cmd = 'ls -1 {}/*'.format(args.input)
@@ -247,7 +245,7 @@ elif args.input_local:
     output = output.split('\n')
     for line in output:
       if not line.find(".root") == -1:
-        input_files.append(line)
+        input_files.append(os.path.abspath(line))
         if len(input_files) == maxfiles: break
 
 # input is eos area on cmslc
@@ -255,7 +253,7 @@ elif args.input_cmslpc:
   if s[len(s)-5:len(s)] == ".root":
     input_files.append(args.input)
   else:
-    list_of_files = subprocess.check_output("xrdfs root://cmseos.fnal.gov ls " + args.input, shell=True)
+    list_of_files = subprocess.getoutput("xrdfs root://cmseos.fnal.gov ls " + args.input)
     list_of_files = list_of_files.split('\n')
     totalfiles = len(list_of_files) 
     if percentmax: maxfiles = int(args.files * totalfiles)
@@ -283,7 +281,7 @@ if args.verbose:
 
 # test input
 if args.input_cmslpc:
-  ret = os.system('eos root://cmseos.fnal.gov ls ' + input_files[0] + ' > /dev/null')
+  ret = os.system('xrdfs root://cmseos.fnal.gov/ ls ' + input_files[0] + ' > /dev/null')
   if not ret == 0:
     raise SystemExit('ERROR: Input is not a valid file on cmslpc eos area! Did you mean to use --input_dataset?')
 elif args.input_local:
