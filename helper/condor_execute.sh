@@ -93,7 +93,8 @@ echo '&&& Run NanoAODTools postprocessor &&&'
 mv ../../../PhysicsTools/NanoAODTools/test/dropPF.txt .
 mv ../../../PhysicsTools/NanoAODTools/test/copy_tree.py .
 if [ $4 == "data" ]; then
-  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main filtersConstr_$5,twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
+  #python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main filtersConstr_$5,twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
+  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
 elif [ $4 == "mc" ]; then
   python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
 elif [ $4 == "sigRes" ]; then
