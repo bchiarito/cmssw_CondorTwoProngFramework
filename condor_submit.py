@@ -303,11 +303,19 @@ elif args.output_local == False and args.output_cmslpc == False:
 if output_not_set and site == "hexcms": args.output_local = True
 if output_not_set and site == "cmslpc": args.output_cmslpc = True
 
+# get git hash/tag
+tag_info = subprocess.getoutput("git describe --tags --long")
+tag_info = tag_info.split('-')
+recent_tag = tag_info[0]
+commits_on_top = tag_info[1]
+current_hash = tag_info[2]
+framework_version = recent_tag+" +"+commits_on_top+" "+current_hash
+
 # create output area
 base = args.output
 if base[-1] == '/': base = base[:-1]
 timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
-output_path = base+'/'+timestamp
+output_path = base+'/'+recent_tag.replace('.','-')+"_plus"+commits_on_top+"_"+current_hash+"_"+timestamp
 if args.output_local:
   if site == "cmslpc": raise SystemExit('ERROR: Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
   if not os.path.isdir(output_path):
@@ -562,6 +570,7 @@ for i in range(len(infile_tranches)):
   template_filename = helper_dir+"/template_"+jobinfo_filename
   replaced_filename = jobinfo_filename
   to_replace = {}
+  to_replace['__frameworkversion__'] = str(framework_version)
   to_replace['__cluster__'] = str(cluster_ids[i])
   to_replace['__queue__'] = str(len(infile_tranches[i]))
   to_replace['__firstproc__'] = str(first_procs[i])

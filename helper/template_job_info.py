@@ -1,3 +1,4 @@
+framework_version = '__frameworkversion__'
 cluster = '__cluster__'
 queue = '__queue__'
 first_proc = '__firstproc__'
