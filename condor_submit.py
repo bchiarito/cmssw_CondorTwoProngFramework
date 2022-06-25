@@ -121,7 +121,7 @@ help="displays when using condor_q -batch")
 num_options = run_args.add_mutually_exclusive_group()
 num_options.add_argument("--numJobs", type=int, metavar='INT',
 help="total number of subjobs in the job")
-num_options.add_argument("--filesPerJob", type=int, metavar='INT', default=1,
+num_options.add_argument("--filesPerJob", type=int, metavar='INT', default=None,
 help="number of files per subjob (default is 1)")
 run_args.add_argument("--files", default=-1, type=float, metavar='maxFiles',
 help="total files, <1 treated as a fraction e.g. 0.1 means 10%% (default is all)")
