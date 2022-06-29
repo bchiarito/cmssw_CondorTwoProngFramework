@@ -1,6 +1,6 @@
 #! /bin/sh
 export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
-export SCRAM_ARCH=slc7_amd64_gcc820
+export SCRAM_ARCH=slc7_amd64_gcc820 # note gcc700 will give error when running pfnano code
 source $VO_CMS_SW_DIR/cmsset_default.sh
 rm -rf prebuild
 mkdir prebuild

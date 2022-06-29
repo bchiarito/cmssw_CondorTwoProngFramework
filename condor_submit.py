@@ -103,8 +103,8 @@ exec_args.add_argument("-y", "--year", default="UL18", choices=['UL16','UL17','U
 help="prescription to follow: UL18 (default), UL17, UL16")
 exec_args.add_argument("-l", "--lumiMask", default=None, metavar='', dest='lumiMask',
 help="path to lumi mask json file")
-exec_args.add_argument("--twoprongSB", default="None", choices=['None','iso','sym','both'], metavar='CHOICE',
-help="include twoprong sideband: None (default), iso")
+exec_args.add_argument("--twoprongSB", default="None", choices=['None','full'], metavar='CHOICE',
+help="include twoprong sideband: None (default), full")
 exec_args.add_argument("--photonSB", default="None", choices=['None'], metavar='CHOICE',
 help="include photon sideband (default None)")
 exec_args.add_argument("--selection", default="None", choices=['None', 'muon', 'photon'], metavar='CHOICE',
@@ -170,9 +170,9 @@ if not (args.year == 'UL18' or
 # process choice of modules
 if args.twoprongSB == 'None':
   constructor = 'default'
-if args.twoprongSB == 'iso':
-  constructor = 'addLooseIso'
-  twoprong_sideband = 'Isolation'
+if args.twoprongSB == 'full':
+  constructor = 'addLoose'
+  twoprong_sideband = 'Isolation and Symmetry'
 if args.photonSB == 'None':
   phoconstructor = 'default'
 if args.photonSB == 'full':
@@ -315,7 +315,7 @@ framework_version = recent_tag+" +"+commits_on_top+" "+current_hash
 base = args.output
 if base[-1] == '/': base = base[:-1]
 timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
-output_path = base+'/'+recent_tag.replace('.','-')+"_plus"+commits_on_top+"_"+current_hash+"_"+timestamp
+output_path = base+'/'+recent_tag.replace('.','p')+"_plus"+commits_on_top+"_"+current_hash+"_"+timestamp
 if args.output_local:
   if site == "cmslpc": raise SystemExit('ERROR: Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
   if not os.path.isdir(output_path):
