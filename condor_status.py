@@ -39,6 +39,7 @@ parser.add_argument("--onlyError", default=False, action="store_true",help="igno
 parser.add_argument("--onlyResubmits", default=False, action="store_true",help="only job Ids resubmitted at least once")
 parser.add_argument("--group", default=False, action="store_true",help="group according to job Id status, instead of numerical order")
 parser.add_argument("--aborted", "-a", default = False, action="store_true", help="prints a formatted list of aborted job IDs to be resubmitted")
+parser.add_argument("--noOutput", "-n", default=False, action="store_true", help="prints a formatted list of no-output job IDs to be resubmitted")
 args = parser.parse_args()
 
 # constants
@@ -238,6 +239,7 @@ if not args.summary: print(' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
 if args.summary: summary = {}
 lines = []
 aborted_jobs = []
+noOutput_jobs = []
 for jobNum in subjobs:
   subjob = subjobs[jobNum]
   status = subjob.get('status','unsubmitted')
@@ -255,6 +257,8 @@ for jobNum in subjobs:
     totalTime = ''
   size = subjob.get('size', "")
   if status=='finished' and size=='': status = 'fin w/o output'
+  if status == 'fin w/o output':
+      noOutput_jobs.append(jobNum)
   if args.onlyFinished and (status=='submitted' or status=='running' or status=='unsubmitted'): continue
   if args.onlyError and (status=='submitted' or status=='running' or status=='finished' or status=='unsubmitted'): continue
   if args.notFinished and (status=='finished'): continue
@@ -300,3 +304,20 @@ if args.aborted and len(aborted_jobs) != 0:
     print('------------------------------------------------------------------------------')
 elif args.aborted:
     print("No jobs were aborted.")
+
+# print formatted fin w/o ouput jobs 
+if args.noOutput and len(noOutput_jobs) != 0:
+    print('------------------------------------------------------------------------------')
+    print("Jobs that finished w/o output: ")
+    print("")
+    x = 0
+    while x < len(noOutput_jobs):
+        if x == len(noOutput_jobs) - 1:
+            sys.stdout.write(str(noOutput_jobs[x]))
+            break
+        sys.stdout.write(str(noOutput_jobs[x]) + ",")
+        x += 1
+    print("")
+    print('------------------------------------------------------------------------------')
+elif args.noOutput:
+    print("No jobs finished without output.")
