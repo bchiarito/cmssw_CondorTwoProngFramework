@@ -304,18 +304,27 @@ if output_not_set and site == "hexcms": args.output_local = True
 if output_not_set and site == "cmslpc": args.output_cmslpc = True
 
 # get git hash/tag
-tag_info = subprocess.getoutput("git describe --tags --long")
-tag_info = tag_info.split('-')
-recent_tag = tag_info[0]
-commits_on_top = tag_info[1]
-current_hash = tag_info[2]
-framework_version = recent_tag+" +"+commits_on_top+" "+current_hash
+tag_info_frontend = subprocess.getoutput("git describe --tags --long")
+tag_info_backend = subprocess.getoutput("cd {}/*/src/; git describe --tags --long".format(cmssw_prebuild_area))
+tag_info_frontend = tag_info_frontend.split('-')
+tag_info_backend = tag_info_backend.split('-')
+f_tag = tag_info_frontend[0]
+f_commits = tag_info_frontend[1]
+f_hash = tag_info_frontend[2]
+b_tag = tag_info_backend[0]
+b_commits = tag_info_backend[1]
+b_hash = tag_info_backend[2]
+f_ver_string = f_tag+" +"+f_commits+" "+f_hash
+b_ver_string = b_tag+" +"+b_commits+" "+b_hash
+f_dir_string = 'f'+f_tag.replace('.','p')+"-"+f_commits+"-"+f_hash[-4:]
+b_dir_string = 'b'+b_tag.replace('.','p')+"-"+b_commits+"-"+b_hash[-4:]
 
 # create output area
 base = args.output
 if base[-1] == '/': base = base[:-1]
 timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
-output_path = base+'/'+recent_tag.replace('.','p')+"_plus"+commits_on_top+"_"+current_hash+"_"+timestamp
+#output_path = base+'/'+recent_tag.replace('.','p')+"_plus"+commits_on_top+"_"+current_hash+"_"+timestamp
+output_path = base+'/'+timestamp+'/'+f_dir_string+"_"+b_dir_string
 if args.output_local:
   if site == "cmslpc": raise SystemExit('ERROR: Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
   if not os.path.isdir(output_path):
@@ -570,7 +579,7 @@ for i in range(len(infile_tranches)):
   template_filename = helper_dir+"/template_"+jobinfo_filename
   replaced_filename = jobinfo_filename
   to_replace = {}
-  to_replace['__frameworkversion__'] = str(framework_version)
+  to_replace['__frameworkversion__'] = str(f_ver_string)
   to_replace['__cluster__'] = str(cluster_ids[i])
   to_replace['__queue__'] = str(len(infile_tranches[i]))
   to_replace['__firstproc__'] = str(first_procs[i])
