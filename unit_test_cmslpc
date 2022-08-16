@@ -7,7 +7,7 @@ test_file_local=/uscms/home/bchiari1/nobackup/rootfiles/framework_unittest/miniA
 UnitTest()
 {
   printf "\n--- Test 1 ---\n\n"
-  ./condor_submit.py $test_file_local --input_local /store/user/bchiari1/condor_framework_unit_tests/ -d unit_test_cmslpc --twoprongSB iso -t -f --mc
+  ./condor_submit.py $test_file_local --input_local /store/user/bchiari1/condor_framework_unit_tests/ -d unit_test_cmslpc --twoprongSB full -t -f --mc
   printf "\n--- Test 2 ---\n\n"
   ./condor_submit.py $test_file_eos /store/user/bchiari1/condor_framework_unit_tests/ -d unit_test_cmslpc -t -f --mc
   printf "\n--- Test 3 ---\n\n"
