@@ -38,7 +38,8 @@ parser.add_argument("--notFinished", default=False, action="store_true",help="ig
 parser.add_argument("--onlyError", default=False, action="store_true",help="ignore 'running', 'submitted', and 'finished, job Ids")
 parser.add_argument("--onlyResubmits", default=False, action="store_true",help="only job Ids resubmitted at least once")
 parser.add_argument("--group", default=False, action="store_true",help="group according to job Id status, instead of numerical order")
-parser.add_argument("--aborted", "-a", default = False, action="store_true", help="prints a formatted list of aborted job IDs to be resubmitted")
+parser.add_argument("--aborted", "-a", default = False, action="store_true", help="prints a string of 'aborted' job IDs for condor_resubmit.py")
+parser.add_argument("--nooutput", default = False, action="store_true", help="prints a string of 'fin w/o output' job IDs for condor_resubmit.py")
 args = parser.parse_args()
 
 # constants
@@ -179,6 +180,7 @@ for resubmit_cluster,procs in job.resubmits:
     if not 'Proc' in block: continue # skip uninteresting
     if not int(block['Proc']) in procs: continue # skip noop_jobs
     if block['MyType'] == 'SubmitEvent':
+      subjobs[int(block['Proc'])]['status'] = 'resubmitted'
       subjobs[int(block['Proc'])]['resubmitted'] += 1
       subjobs[int(block['Proc'])]['start_time'] = date
       subjobs[int(block['Proc'])].pop('end_time', None)
@@ -232,19 +234,20 @@ else: # local
   suffix = output.split()[0].strip()[-1]
 print("Total output size ", size, suffix)
 
-if not args.summary: print(' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
+if not args.summary and not args.aborted and not args.nooutput: print(' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
        'Proc', 'Status', 'Resubs', 'Wall Time', 'Output File', 'Msg'
 ))
 if args.summary: summary = {}
 lines = []
 aborted_jobs = []
+nooutput_jobs = []
 for jobNum in subjobs:
   subjob = subjobs[jobNum]
   status = subjob.get('status','unsubmitted')
   reason = subjob.get('reason','')
   reason = reason[0:80]
-  if status == 'aborted':  # determines if the job was aborted
-      aborted_jobs.append(jobNum)
+  if status == 'aborted':
+    aborted_jobs.append(jobNum)
   if 'start_time' in subjob and 'end_time' in subjob:
     totalTime = str(datetime.timedelta(seconds = timegm(subjob['end_time']) - timegm(subjob['start_time'])))
   elif 'start_time' in subjob:
@@ -254,21 +257,23 @@ for jobNum in subjobs:
   else:
     totalTime = ''
   size = subjob.get('size', "")
-  if status=='finished' and size=='': status = 'fin w/o output'
+  if status=='finished' and size=='':
+    status = 'fin w/o output'
+    nooutput_jobs.append(jobNum)
   if args.onlyFinished and (status=='submitted' or status=='running' or status=='unsubmitted'): continue
   if args.onlyError and (status=='submitted' or status=='running' or status=='finished' or status=='unsubmitted'): continue
   if args.notFinished and (status=='finished'): continue
   resubs = subjob.get('resubmitted', '')
   if resubs == 0: resubs = ''
   if args.onlyResubmits and resubs == '': continue  
-  lines.append(' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
+  lines.append(' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {:<70.70}'.format(
          str(jobNum), str(status), str(resubs), str(totalTime), str(size), str(reason)
   ))
   if args.summary:
     if status in summary: summary[status] += 1
     else: summary[status] = 1
 
-if not args.summary:
+if not args.summary and not args.aborted and not args.nooutput:
   if args.group:
     def status(line):
       return (line.split('|'))[1]
@@ -284,19 +289,27 @@ if args.summary:
   for status in summary:
     print('{:<15} | {}'.format(str(status), str(summary[status])))
 
-# print formatted timeout job list if requested
 if args.aborted and len(aborted_jobs) != 0:
-    print('------------------------------------------------------------------------------')
-    print("Jobs that were aborted: ")
-    print("")
-    x = 0
-    while x < len(aborted_jobs):
-        if x == len(aborted_jobs) - 1:
-            sys.stdout.write(str(aborted_jobs[x]))
-            break
-        sys.stdout.write(str(aborted_jobs[x]) + ",")
-        x += 1
-    print("")
-    print('------------------------------------------------------------------------------')
+  x = 0
+  while x < len(aborted_jobs):
+      if x == len(aborted_jobs) - 1:
+          sys.stdout.write(str(aborted_jobs[x]))
+          break
+      sys.stdout.write(str(aborted_jobs[x]) + ",")
+      x += 1
+  sys.stdout.write("\n")
 elif args.aborted:
-    print("No jobs were aborted.")
+  print("No jobs were aborted")
+
+if args.nooutput and len(nooutput_jobs) != 0:
+  x = 0
+  while x < len(nooutput_jobs):
+      if x == len(nooutput_jobs) - 1:
+          sys.stdout.write(str(nooutput_jobs[x]))
+          break
+      sys.stdout.write(str(nooutput_jobs[x]) + ",")
+      x += 1
+  sys.stdout.write("\n")
+elif args.nooutput:
+  print("No jobs finished without output")
+
