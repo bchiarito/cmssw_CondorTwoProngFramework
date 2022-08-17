@@ -170,7 +170,7 @@ if not (args.year == 'UL18' or
   raise SystemExit('ERROR: --year must be one of: UL18, UL17, UL16')
 
 # process choice of modules
-if not arg.twoprongExtra:
+if not args.twoprongExtra:
   if args.twoprongSB == 'None':
     constructor = 'default'
   if args.twoprongSB == 'full':
@@ -522,6 +522,8 @@ print("Job Batch Name      :", args.dir if args.batch is None else args.batch)
 print("Job Specification   :", args.year +" "+datamc.upper())
 if not args.twoprongSB=='None':
   print("Twoprong Sideband   : " + twoprong_sideband)
+if args.twoprongExtra:
+  print("Object Modification : " + "TwoProng Optional Extra Track")
 if not args.photonSB=='None':
   print("Photon Sideband     : " + photon_sideband)
 if not args.selection=='None':
