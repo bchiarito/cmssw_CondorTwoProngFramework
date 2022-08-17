@@ -105,6 +105,8 @@ exec_args.add_argument("-l", "--lumiMask", default=None, metavar='', dest='lumiM
 help="path to lumi mask json file")
 exec_args.add_argument("--twoprongSB", default="None", choices=['None','full'], metavar='CHOICE',
 help="include twoprong sideband: None (default), full")
+exec_args.add_argument("--twoprongExtra", action="store_true", default=False,
+help="modify twoprong object: allow optional extra track")
 exec_args.add_argument("--photonSB", default="None", choices=['None'], metavar='CHOICE',
 help="include photon sideband (default None)")
 exec_args.add_argument("--selection", default="None", choices=['None', 'muon', 'photon'], metavar='CHOICE',
@@ -168,11 +170,18 @@ if not (args.year == 'UL18' or
   raise SystemExit('ERROR: --year must be one of: UL18, UL17, UL16')
 
 # process choice of modules
-if args.twoprongSB == 'None':
-  constructor = 'default'
-if args.twoprongSB == 'full':
-  constructor = 'addLoose'
-  twoprong_sideband = 'Isolation and Symmetry'
+if not arg.twoprongExtra:
+  if args.twoprongSB == 'None':
+    constructor = 'default'
+  if args.twoprongSB == 'full':
+    constructor = 'addLoose'
+    twoprong_sideband = 'Isolation and Symmetry'
+else:
+  if args.twoprongSB == 'None':
+    constructor = 'optionalTrack'
+  if args.twoprongSB == 'full':
+    constructor = 'optionalTrack_addLoose'
+    twoprong_sideband = 'Isolation and Symmetry'
 if args.photonSB == 'None':
   phoconstructor = 'default'
 if args.photonSB == 'full':
