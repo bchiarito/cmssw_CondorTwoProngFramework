@@ -225,7 +225,7 @@ for count, resubmit_cluster in enumerate(job.resubmits):
   print("  Resubmit", count+1, "ClusterId", resubmit_cluster[0])
 print("Job output area:", output_area)
 if output_eos:
-  output = subprocess.check_output('/uscms/home/bchiari1/bin/eosdu -h '+output_area, shell=True).decode('utf-8')
+  output = subprocess.check_output('/uscms/home/bchiari1/util_repo/bin/eosdu -h '+output_area, shell=True).decode('utf-8')
   size = output.strip()[:-1]
   suffix = output.strip()[-1]
 else: # local
