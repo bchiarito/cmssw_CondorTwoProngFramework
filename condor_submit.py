@@ -197,6 +197,14 @@ if args.scheddLimit == -1:
   if site == 'hexcms': args.scheddLimit = 350
   if site == 'cmslpc': args.scheddLimit = 1500
 
+# prepare prebuild area to send with job
+if args.rebuild:
+  print("Setting up src directory (inside ./"+cmssw_prebuild_area+") to ship with job")
+  os.system('./' + helper_dir +'/'+ src_setup_script)
+  print("\nFinished setting up directory to ship with job.\n")
+if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
+  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
+
 # check input
 input_not_set = False
 if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
@@ -323,7 +331,6 @@ b_dir_string = 'b'+b_tag.replace('.','p')+"-"+b_commits+"-"+b_hash[-4:]
 base = args.output
 if base[-1] == '/': base = base[:-1]
 timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
-#output_path = base+'/'+recent_tag.replace('.','p')+"_plus"+commits_on_top+"_"+current_hash+"_"+timestamp
 output_path = base+'/'+timestamp+'/'+f_dir_string+"_"+b_dir_string
 if args.output_local:
   if site == "cmslpc": raise SystemExit('ERROR: Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
@@ -487,13 +494,6 @@ for i in range(len(infile_tranches)):
 os.system('rm ' + new_unpacker_filename)
 os.system('rm ' + new_stageout_filename)
 
-# prepare prebuild area to send with job
-if args.rebuild:
-  print("Setting up src directory (inside ./"+cmssw_prebuild_area+") to ship with job")
-  os.system('./' + helper_dir +'/'+ src_setup_script)
-  print("\nFinished setting up directory to ship with job.\n")
-if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
-  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 
 # print summary
 if args.output_local: o_assume = 'local'
