@@ -94,13 +94,13 @@ mv ../../../PhysicsTools/NanoAODTools/test/dropPF.txt .
 mv ../../../PhysicsTools/NanoAODTools/test/copy_tree.py .
 if [ $4 == "data" ]; then
   #python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main filtersConstr_$5,twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
-  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_$7,photonConstr_$8,recoPhiConstr_HPID,recoPhiConstr_cutBased,selectionConstr_$9 --bo dropPF.txt
+  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
 elif [ $4 == "mc" ]; then
-  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_$7,photonConstr_$8,recoPhiConstr_HPID,recoPhiConstr_cutBased,selectionConstr_$9 --bo dropPF.txt
+  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
 elif [ $4 == "sigRes" ]; then
-  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main genpartConstr_res,twoprongConstr_$7,photonConstr_$8,recoPhiConstr_HPID,recoPhiConstr_cutBased,selectionConstr_$9 --bo dropPF.txt
+  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main genpartConstr_res,twoprongConstr_$7,recoPhiConstr_cutBased,selectionConstr_$9 --bo dropPF.txt
 elif [ $4 == "sigNonRes" ]; then
-  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main genpartConstr_nonres,twoprongConstr_$7,photonConstr_$8,recoPhiConstr_HPID,recoPhiConstr_cutBased,selectionConstr_$9 --bo dropPF.txt
+  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main genpartConstr_nonres,twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
 else
   echo '&&& ERROR! Could not determine data/mc/signal !!! &&&'
 fi
