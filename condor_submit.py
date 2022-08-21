@@ -343,8 +343,7 @@ b_dir_string = 'b'+b_tag.replace('.','p')+"-"+b_commits+"-"+b_hash[-4:]
 # create output area
 base = args.output
 if base[-1] == '/': base = base[:-1]
-#timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
+timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 output_path = base+'/'+timestamp+'/'+f_dir_string+"_"+b_dir_string
 if args.output_local:
   if site == "cmslpc": raise SystemExit('ERROR: Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
