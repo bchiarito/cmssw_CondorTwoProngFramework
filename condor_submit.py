@@ -109,8 +109,8 @@ exec_args.add_argument("--twoprongExtra", action="store_true", default=False,
 help="modify twoprong object: allow optional extra track")
 exec_args.add_argument("--photonSB", default="None", choices=['None'], metavar='CHOICE',
 help="include photon sideband (default None)")
-exec_args.add_argument("--selection", default="None", choices=['None', 'muon', 'photon'], metavar='CHOICE',
-help="apply event preselection None (default), muon, photon")
+exec_args.add_argument("--selection", default="None", choices=['None', 'muon', 'photon', 'trigger'], metavar='CHOICE',
+help="apply event preselection None (default), muon, photon, trigger")
 exec_args.add_argument("--noPayload", default=False, action="store_true",
 help="for testing purposes")
 
@@ -195,6 +195,9 @@ if args.selection == 'muon':
 if args.selection == 'photon':
   selection = 'photon'
   selection_text = 'slimmedPhotons >= 1'
+if args.selection == 'trigger':
+  selection = 'muonelectronphoton'
+  selection_text = 'slimmedMuons or slimmedElectrons or slimmedPhotons >= 1'
 
 # define max files
 maxfiles = args.files
@@ -214,17 +217,6 @@ if args.rebuild:
 if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 
-# check input
-input_not_set = False
-if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
-   re.match("(?:" + "/.*/.*/MINIAODSIM" + r")\Z", args.input): args.input_dataset = True
-if args.input_local == False and args.input_cmslpc == False and args.input_dataset == False:
-  input_not_set = True
-if input_not_set and site == "hexcms": args.input_local = True
-if input_not_set and site == "cmslpc": args.input_cmslpc = True
-input_files = [] # each entry a file location
-s = args.input
-
 # check proxy
 if site == 'hexcms' and args.input_dataset:
   if args.proxy == '':
@@ -241,6 +233,18 @@ if site == 'hexcms' and args.input_dataset:
 if site == 'cmslpc':
   time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
   if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
+
+# check input
+input_not_set = False
+if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
+   re.match("(?:" + "/.*/.*/MINIAODSIM" + r")\Z", args.input): args.input_dataset = True
+if args.input_local == False and args.input_cmslpc == False and args.input_dataset == False:
+  input_not_set = True
+if input_not_set and site == "hexcms": args.input_local = True
+if input_not_set and site == "cmslpc": args.input_cmslpc = True
+if args.input_local and site == "cmslpc": raise SystemExit("Configuration Error: cannot use --input_local on cmslpc.")
+input_files = [] # each entry a file location
+s = args.input
 
 # input is .txt file
 if s[len(s)-4:len(s)] == ".txt":
@@ -339,6 +343,7 @@ b_dir_string = 'b'+b_tag.replace('.','p')+"-"+b_commits+"-"+b_hash[-4:]
 # create output area
 base = args.output
 if base[-1] == '/': base = base[:-1]
+#timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
 output_path = base+'/'+timestamp+'/'+f_dir_string+"_"+b_dir_string
 if args.output_local:
