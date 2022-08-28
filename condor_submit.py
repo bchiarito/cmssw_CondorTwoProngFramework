@@ -197,7 +197,7 @@ if args.selection == 'photon':
   selection_text = 'slimmedPhotons >= 1'
 if args.selection == 'trigger':
   selection = 'muonelectronphoton'
-  selection_text = 'slimmedMuons or slimmedElectrons or slimmedPhotons >= 1'
+  selection_text = 'slimmedMuons or slimmedElectrons or slimmedPhotons >= 1, and pT>15'
 
 # define max files
 maxfiles = args.files
