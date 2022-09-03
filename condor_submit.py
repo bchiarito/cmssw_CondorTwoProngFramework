@@ -217,22 +217,6 @@ if args.rebuild:
 if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 
-# check proxy
-if site == 'hexcms' and args.input_dataset:
-  if args.proxy == '':
-    subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)
-    proxy_path = ((subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)).strip()).decode('utf-8')
-  else:
-    proxy_path = args.proxy
-  if not os.path.isfile(proxy_path):
-    raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-init -voms cms")
-  os.system('cp '+proxy_path+' .')
-  proxy_filename = os.path.basename(proxy_path)
-  time_left = str(timedelta(seconds=int(subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script_timeleft, shell=True))))
-  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
-if site == 'cmslpc':
-  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
-  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
 # check input
 input_not_set = False
@@ -323,6 +307,23 @@ elif args.output_local == False and args.output_cmslpc == False:
   output_not_set = True
 if output_not_set and site == "hexcms": args.output_local = True
 if output_not_set and site == "cmslpc": args.output_cmslpc = True
+
+# check proxy
+if site == 'hexcms' and args.input_dataset:
+  if args.proxy == '':
+    subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)
+    proxy_path = ((subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)).strip()).decode('utf-8')
+  else:
+    proxy_path = args.proxy
+  if not os.path.isfile(proxy_path):
+    raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-init -voms cms")
+  os.system('cp '+proxy_path+' .')
+  proxy_filename = os.path.basename(proxy_path)
+  time_left = str(timedelta(seconds=int(subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script_timeleft, shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
+if site == 'cmslpc':
+  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
 # get git hash/tag
 tag_info_frontend = subprocess.getoutput("git describe --tags --long")
