@@ -207,7 +207,7 @@ else: percentmax = False
 # determine schedd limit
 if args.scheddLimit == -1:
   if site == 'hexcms': args.scheddLimit = 350
-  if site == 'cmslpc': args.scheddLimit = 1500
+  if site == 'cmslpc': args.scheddLimit = 1000
 
 # prepare prebuild area to send with job
 if args.rebuild:
@@ -508,6 +508,12 @@ for i in range(len(infile_tranches)):
 os.system('rm ' + new_unpacker_filename)
 os.system('rm ' + new_stageout_filename)
 
+# get the schedd
+coll = htcondor.Collector()
+schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
+if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
+if site == 'cmslpc': schedd_ad = schedd_query[15]
+schedd = htcondor.Schedd(schedd_ad)
 
 # print summary
 if args.output_local: o_assume = 'local'
@@ -543,7 +549,7 @@ print("Output              : " + o_assume)
 print("Output Directory    :", output_path)
 if not args.lumiMask is None:
   print("Lumi Mask           : " + os.path.basename(args.lumiMask))
-#print("Schedd              :", schedd_ad["Name"])
+print("Schedd              :", schedd_ad["Name"])
 if args.input_dataset: print("Grid Proxy          :", time_left + ' left')
 
 # prompt user to double-check job summary
@@ -563,13 +569,6 @@ while True:
     sys.exit()
   elif response == '': break
   else: pass
-
-# get the schedd
-coll = htcondor.Collector()
-sched_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
-if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
-if site == 'cmslpc': schedd_ad = sched_query[0]
-schedd = htcondor.Schedd(schedd_ad)
 
 # submit
 cluster_ids = []
