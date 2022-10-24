@@ -509,10 +509,17 @@ os.system('rm ' + new_unpacker_filename)
 os.system('rm ' + new_stageout_filename)
 
 # get the schedd
-coll = htcondor.Collector()
-schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
-if site == 'hexcms': schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
-if site == 'cmslpc': schedd_ad = schedd_query[15]
+if site == 'hexcms':
+  coll = htcondor.Collector()
+  schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
+  schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
+if site == 'cmslpc':
+  collector = htcondor.Collector()
+  coll_query = collector.query(htcondor.AdTypes.Schedd, \
+  constraint='FERMIHTC_DRAIN_LPCSCHEDD=?=FALSE && FERMIHTC_SCHEDD_TYPE=?="CMSLPC"',
+  projection=["Name", "MyAddress"]
+  )
+  schedd_ad = coll_query[0]
 schedd = htcondor.Schedd(schedd_ad)
 
 # print summary

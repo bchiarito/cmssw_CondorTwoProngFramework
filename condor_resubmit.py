@@ -74,18 +74,32 @@ if site == 'cmslpc':
   if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
 # get the schedd
-if args.verbose: print("DEBUG: Get Schedd")
-coll = htcondor.Collector()
-if site == 'cmslpc':
-  schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
-  for s in schedd_query:
-    if str(s["Name"]) == str(schedd_name):
-      schedd_ad = s
-  schedd = htcondor.Schedd(schedd_ad)
+#if args.verbose: print("DEBUG: Get Schedd")
+#coll = htcondor.Collector()
+#if site == 'cmslpc':
+#  schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
+#  for s in schedd_query:
+#    if str(s["Name"]) == str(schedd_name):
+#      schedd_ad = s
+#  schedd = htcondor.Schedd(schedd_ad)
+#if site == 'hexcms':
+#  schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
+#  schedd = htcondor.Schedd(schedd_ad)
+#if args.verbose: print("DEBUG:", schedd_ad["Name"])
+
+# get the schedd
 if site == 'hexcms':
+  coll = htcondor.Collector()
+  schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
   schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
-  schedd = htcondor.Schedd(schedd_ad)
-if args.verbose: print("DEBUG:", schedd_ad["Name"])
+if site == 'cmslpc':
+  collector = htcondor.Collector()
+  coll_query = collector.query(htcondor.AdTypes.Schedd, \
+  constraint='FERMIHTC_DRAIN_LPCSCHEDD=?=FALSE && FERMIHTC_SCHEDD_TYPE=?="CMSLPC"',
+  projection=["Name", "MyAddress"]
+  )
+  schedd_ad = coll_query[0]
+schedd = htcondor.Schedd(schedd_ad)
 
 # make list of procs to resubmit
 procs = []
