@@ -87,6 +87,8 @@ output_options.add_argument("--output_local", action="store_true",
 help=argparse.SUPPRESS)
 output_options.add_argument("--output_cmslpc", action="store_true",
 help=argparse.SUPPRESS)
+output_options.add_argument("--output_hexcms", action="store_true",
+help=argparse.SUPPRESS)
 
 # execution specification
 exec_args = parser.add_argument_group('execution options')
@@ -303,10 +305,12 @@ if args.output[0] == '.':
 output_not_set = False
 if not args.output[0:7] == '/store/':
   args.output_local = True
-elif args.output_local == False and args.output_cmslpc == False:
+elif args.output_local == False and args.output_cmslpc == False and args.output_hexcms == False:
   output_not_set = True
 if output_not_set and site == "hexcms": args.output_local = True
 if output_not_set and site == "cmslpc": args.output_cmslpc = True
+if args.output_cmslpc: redirector = "root://cmseos.fnal.gov/"
+if args.output_hexcms: redirector = "root://ruhex-osgce.rutgers.edu/"
 
 # check proxy
 if site == 'hexcms' and args.input_dataset:
@@ -356,11 +360,17 @@ if args.output_cmslpc:
   if not ret == 0: raise SystemExit('ERROR: Failed to create job output directory in cmslpc eos area!')
 
 # test output
+if args.output_hexcms:
+  os.system('touch blank.txt')
+  print('xrdcp --nopbar blank.txt '+ redirector + output_path)
+  ret = os.system('xrdcp --nopbar blank.txt '+ redirector + output_path)
+  if not ret == 0: raise SystemExit('ERROR: Failed to xrdcp test file into output eos area!')
+  os.system('rm blank.txt')
 if args.output_cmslpc:
   os.system('touch blank.txt')
-  ret = os.system('xrdcp --nopbar blank.txt root://cmseos.fnal.gov/' + output_path)
+  ret = os.system('xrdcp --nopbar blank.txt '+ redirector + output_path)
   if not ret == 0: raise SystemExit('ERROR: Failed to xrdcp test file into output eos area!')
-  ret = os.system("eos root://cmseos.fnal.gov rm " + output_path + "/blank.txt &> /dev/null")
+  ret = os.system("eos " + redirector + " rm " + output_path + "/blank.txt &> /dev/null")
   if not ret == 0: raise SystemExit('ERROR: Failed eosrm test file from output eos area!')
   os.system('rm blank.txt')
 
@@ -427,7 +437,7 @@ if args.output_local:
   to_replace['__redirector__'] = ''
   to_replace['__copycommand__'] = 'cp'
 if args.output_cmslpc:
-  to_replace['__redirector__'] = 'root://cmseos.fnal.gov/'
+  to_replace['__redirector__'] = redirector
   to_replace['__copycommand__'] = 'xrdcp --nopbar'
 use_template_to_replace(template_filename, new_stageout_filename, to_replace)
 
@@ -525,6 +535,7 @@ schedd = htcondor.Schedd(schedd_ad)
 # print summary
 if args.output_local: o_assume = 'local'
 if args.output_cmslpc: o_assume = 'cmslpc eos'
+if args.output_hexcms: o_assume = 'hexcms eos'
 if args.input_local: i_assume = 'local'
 if args.input_cmslpc: i_assume = 'cmslpc eos'
 if args.input_dataset: i_assume = 'official dataset'
