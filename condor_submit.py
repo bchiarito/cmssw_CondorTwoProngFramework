@@ -219,7 +219,6 @@ if args.rebuild:
 if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 
-
 # check input
 input_not_set = False
 if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
@@ -362,8 +361,7 @@ if args.output_cmslpc:
 # test output
 if args.output_hexcms:
   os.system('touch blank.txt')
-  print('xrdcp --nopbar blank.txt '+ redirector + output_path)
-  ret = os.system('xrdcp --nopbar blank.txt '+ redirector + output_path)
+  ret = os.system('xrdcp --nopbar blank.txt '+ redirector + output_path + "/blank.txt")
   if not ret == 0: raise SystemExit('ERROR: Failed to xrdcp test file into output eos area!')
   os.system('rm blank.txt')
 if args.output_cmslpc:
@@ -436,7 +434,7 @@ to_replace['__outputlocation__'] = output_path
 if args.output_local:
   to_replace['__redirector__'] = ''
   to_replace['__copycommand__'] = 'cp'
-if args.output_cmslpc:
+if args.output_cmslpc or args.output_hexcms:
   to_replace['__redirector__'] = redirector
   to_replace['__copycommand__'] = 'xrdcp --nopbar'
 use_template_to_replace(template_filename, new_stageout_filename, to_replace)
