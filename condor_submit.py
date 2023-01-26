@@ -349,6 +349,8 @@ base = args.output
 if base[-1] == '/': base = base[:-1]
 timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 output_path = base+'/'+timestamp+'/'+f_dir_string+"_"+b_dir_string
+if args.output_local and args.output_hexcms:
+  raise SystemExit('ERROR: If sending output to hexcms, please specify eos path (/store/user/..) and not local path (/cms/..).')
 if args.output_local:
   if site == "cmslpc": raise SystemExit('ERROR: Cannot write output to local filesystem when running on cmslpc: functionality not implemented!')
   if not os.path.isdir(output_path):
