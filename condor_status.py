@@ -235,7 +235,7 @@ if output_eos:
   size = output.strip()[:-1]
   suffix = output.strip()[-1]
   print("Total output size ", size, suffix)
-if not output_hex: # local
+elif not output_hex: # local
   output = subprocess.check_output('du -hs '+output_area, shell=True).decode('utf-8')
   size = output.split()[0].strip()[:-1]
   suffix = output.split()[0].strip()[-1]
