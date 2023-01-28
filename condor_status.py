@@ -83,7 +83,7 @@ if args.verbose: print("DEBUG: Discover output files")
 if output_eos:
   if args.verbose: print("DEBUG: command", 'eos root://cmseos.fnal.gov ls -lh '+output_area)
   output = subprocess.check_output('eos root://cmseos.fnal.gov ls -lh '+output_area, shell=True)
-if not output_hex: # local
+elif not output_hex: # local
   if args.verbose: print("DEBUG: command", 'ls -lh '+output_area)
   output = subprocess.check_output('ls -lh '+output_area, shell=True) 
 if output_eos or not output_hex:
