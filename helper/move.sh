@@ -18,9 +18,12 @@ if [ -f /osg/current/setup.sh ]; then
   echo ''
 fi
 
+echo '&&& prepare &&&'
+touch blank.txt
+xrdcp blank.txt ${2}touch.txt
+
 echo '&&& run xrdcp &&&'
-echo 'xrdcp -r $1 $2'
-xrdcp -r $1 $2
+xrdcp -r --retry=2 $1 $2
 
 echo ''
 echo '&&& Finished &&&'
