@@ -25,6 +25,10 @@ parser.add_argument("source" ,help="path on eos including redirector")
 parser.add_argument("dest", help="path on eos including redirector")
 args = parser.parse_args()
 
+# ensure: source has no ending slash, destination has ending slash
+if args.source[len(args.source)-1] == '/': args.source = args.source[:-1]
+if not args.dest[len(args.dest)-1] == '/': args.dest = args.dest + '/'
+
 # define submit file
 sub = htcondor.Submit()
 sub['executable'] = 'helper/move.sh'
