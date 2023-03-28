@@ -356,6 +356,8 @@ if args.output_local:
   if not os.path.isdir(output_path):
     ret = os.system('mkdir -p ' + output_path)
     if not ret == 0: raise SystemExit('ERROR: Failed to create job output directory!')
+    ret = os.system('mkdir -p ' + output_path+'/reports/')
+    if not ret == 0: raise SystemExit('ERROR: Failed to create job reports directory!')
 if args.output_cmslpc:
   ret = os.system("eos root://cmseos.fnal.gov mkdir -p " + output_path)
   if not ret == 0: raise SystemExit('ERROR: Failed to create job output directory in cmslpc eos area!')

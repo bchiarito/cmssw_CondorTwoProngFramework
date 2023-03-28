@@ -74,13 +74,13 @@ ls -ldh *
 echo ''
 echo '&&& cmsRun cfg.py &&&'
 if [ $4 == "data" ]; then
-  cmsRun NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
 elif [ $4 == "mc" ]; then
-  cmsRun NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
 elif [ $4 == "sigRes" ]; then
-  cmsRun NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
 elif [ $4 == "sigNonRes" ]; then
-  cmsRun NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
 else
   echo '&&& ERROR! Could not determine data/mc/signal !!! &&&'
 fi
@@ -118,6 +118,7 @@ echo ''
 
 echo '&&& Moving final rootfile back to initial directory &&&'
 mv NANOAOD_TwoProng.root $INITIAL_DIR
+mv report.xml $INITIAL_DIR
 cd $INITIAL_DIR
 echo ''
 echo '&&& Current Directory and Contents: &&&'
