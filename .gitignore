@@ -1,5 +1,6 @@
 Job_*/
 TestJob_*/
+move_*/
 prebuild/
 *.pyc
 x509up*
