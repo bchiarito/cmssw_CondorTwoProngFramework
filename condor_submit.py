@@ -570,6 +570,7 @@ print("Output Directory    :", output_path)
 if not args.lumiMask is None:
   print("Lumi Mask           : " + os.path.basename(args.lumiMask))
 print("Schedd              :", schedd_ad["Name"])
+print("Schedd Limit        :", args.scheddLimit)
 if args.input_dataset: print("Grid Proxy          :", time_left + ' left')
 
 # prompt user to double-check job summary
