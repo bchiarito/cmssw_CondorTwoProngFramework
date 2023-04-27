@@ -23,7 +23,7 @@ executable_fast = 'condor_execute_fast.sh'
 src_setup_script = 'prebuild_setup.sh' # also in unit test scripts
 submit_file_filename = 'submit_file.jdl'
 input_file_filename_base = 'infiles' # also in executable
-finalfile_filename = 'NANOAOD_TwoProng.root'
+finalfile_filename = 'NANOAOD'
 unpacker_filename = 'unpacker.py'
 stageout_filename = 'stageout.py'
 jobinfo_filename = 'job_info.py'
@@ -343,6 +343,7 @@ f_ver_string = f_tag+" +"+f_commits+" "+f_hash
 b_ver_string = b_tag+" +"+b_commits+" "+b_hash
 f_dir_string = 'f'+f_tag.replace('.','p')+"-"+f_commits+"-"+f_hash[-4:]
 b_dir_string = 'b'+b_tag.replace('.','p')+"-"+b_commits+"-"+b_hash[-4:]
+file_verstring = b_tag.replace('.','p')+"c"+b_commits
 
 # create output area
 base = args.output
@@ -433,7 +434,7 @@ use_template_to_replace(template_filename, new_unpacker_filename, to_replace)
 template_filename = helper_dir+"/template_"+stageout_filename
 new_stageout_filename = stageout_filename
 to_replace = {}
-to_replace['__finalfile__'] = finalfile_filename
+to_replace['__finalfile__'] = finalfile_filename+'_'+file_verstring+'.root'
 to_replace['__outputlocation__'] = output_path
 if args.output_local:
   to_replace['__redirector__'] = ''
