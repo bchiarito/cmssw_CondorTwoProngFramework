@@ -1,0 +1,6 @@
+Dataset: /GJets_HT-40To100_TuneCP5_13TeV-madgraphMLM-pythia8/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM
+Size: 1.6 TB
+Files: 703
+Events: 30,564,375
+43,477 events/file
+2.2 GB/file
