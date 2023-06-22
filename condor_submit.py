@@ -312,7 +312,7 @@ if args.output_cmslpc: redirector = "root://cmseos.fnal.gov/"
 if args.output_hexcms: redirector = "root://ruhex-osgce.rutgers.edu/"
 
 # check proxy
-if site == 'hexcms' and args.input_dataset:
+if (site == 'hexcms' and args.input_dataset) or (site == 'hexcms' and args.input_cmslpc):
   if args.proxy == '':
     subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)
     proxy_path = ((subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)).strip()).decode('utf-8')
@@ -464,6 +464,7 @@ for i in range(len(infile_tranches)):
   sub['Notification'] = 'Never'
   if site == 'cmslpc': sub['use_x509userproxy'] = 'true'
   if site == 'hexcms' and args.input_dataset: sub['x509userproxy'] = os.path.basename(proxy_path)
+  if site == 'hexcms' and args.input_cmslpc: sub['x509userproxy'] = os.path.basename(proxy_path)
   sub['transfer_input_files'] = \
     job_dir+'/'+unpacker_filename + ", " + \
     job_dir+'/'+stageout_filename + ", " + \
