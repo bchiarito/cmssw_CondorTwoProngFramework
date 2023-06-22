@@ -96,6 +96,7 @@ if output_eos or not output_hex:
     try:
       l = line.split()
       fi = l[len(l)-1]
+      if not fi.endswith('.root'): continue
       if output_eos: size = l[4]+' '+l[5]
       else:
         temp = l[4]
@@ -123,9 +124,10 @@ except subprocess.CalledProcessError as e:
   wait_output = e.output
 if args.verbose: print("DEBUG: job report file created")
 matches = re.finditer(regex, wait_output.decode('utf-8'), re.MULTILINE | re.DOTALL)
-for match in matches:
+for i, match in enumerate(matches):
   block = json.loads(match.group(0))
   date = time.strptime(str(block['EventTime']), '%Y-%m-%dT%H:%M:%S')
+  if i == 0: first_date = time.strptime(str(block['EventTime']), '%Y-%m-%dT%H:%M:%S')
   t = timegm(date)
   if block['MyType'] == 'SubmitEvent':
     subjobs[int(block['Proc'])]['resubmitted'] = 0
@@ -225,8 +227,10 @@ for resubmit_cluster,procs in job.resubmits:
       if args.verbose: print("  ", item, "=", subjob[item])
   if args.verbose: print("")
 
+total_time = str(datetime.timedelta(seconds = timegm(date) - timegm(first_date)))
+
 # Print Status
-print("Results for ClusterId", cluster, "at schedd", schedd_name)
+print("Results for ClusterId", cluster, "at schedd", schedd_name, "total time", total_time)
 for count, resubmit_cluster in enumerate(job.resubmits):
   print("  Resubmit", count+1, "ClusterId", resubmit_cluster[0])
 print("Job output area:", output_area)
