@@ -249,6 +249,7 @@ elif args.input_local:
     cmd = 'ls -1 {}/*'.format(args.input)
     output = subprocess.check_output(cmd, shell=True).decode('utf-8')
     output = output.split('\n')
+    if output[0].find('/') == -1: raise SystemExit("ERROR: check input directory, might be too many levels above rootfiles.")
     for line in output:
       if not line.find(".root") == -1:
         input_files.append(os.path.abspath(line))
