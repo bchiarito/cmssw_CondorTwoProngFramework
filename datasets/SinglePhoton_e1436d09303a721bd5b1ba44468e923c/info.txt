@@ -1,0 +1,6 @@
+Dataset: /SinglePhoton/Run2017D-UL2017_MiniAODv2-v1/MINIAOD
+Size: 0.4 TB
+Files: 105
+Events: 9,753,462
+92,890 events/file
+3.4 GB/file
