@@ -1,0 +1,6 @@
+Dataset: /GJets_HT-600ToInf_TuneCP5_13TeV-madgraphMLM-pythia8/RunIISummer20UL17MiniAODv2-106X_mc2017_realistic_v9-v2/MINIAODSIM
+Size: 0.8 TB
+Files: 438
+Events: 11,425,129
+26,084 events/file
+1.9 GB/file
