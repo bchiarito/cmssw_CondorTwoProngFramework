@@ -265,6 +265,9 @@ elif args.input_cmslpc:
     totalfiles = len(list_of_files) 
     if percentmax: maxfiles = int(args.files * totalfiles)
     for line in list_of_files:
+      while not line[len(line)-5:len(line)]=='.root':
+        sub = subprocess.getoutput("xrdfs root://cmseos.fnal.gov ls " + line)
+        line = sub
       input_files.append(line)
       if len(input_files) == maxfiles: break
 
