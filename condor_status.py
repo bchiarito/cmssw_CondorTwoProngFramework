@@ -189,7 +189,10 @@ for resubmit_cluster,procs in job.resubmits:
     if not int(block['Proc']) in procs: continue # skip noop_jobs
     if block['MyType'] == 'SubmitEvent':
       subjobs[int(block['Proc'])]['status'] = 'resubmitted'
-      subjobs[int(block['Proc'])]['resubmitted'] += 1
+      try:
+        subjobs[int(block['Proc'])]['resubmitted'] += 1
+      except KeyError:
+        subjobs[int(block['Proc'])]['resubmitted'] = 1
       subjobs[int(block['Proc'])]['start_time'] = date
       subjobs[int(block['Proc'])].pop('end_time', None)
       subjobs[int(block['Proc'])]['reason'] = ''

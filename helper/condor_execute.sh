@@ -32,8 +32,8 @@ export HOME=$INITIAL_DIR
 export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
 export SCRAM_ARCH=slc7_amd64_gcc820
 source $VO_CMS_SW_DIR/cmsset_default.sh
-scramv1 project CMSSW CMSSW_10_6_20
-cd CMSSW_10_6_20/src
+scramv1 project CMSSW CMSSW_10_6_27
+cd CMSSW_10_6_27/src
 eval `scramv1 runtime -sh`
 mv $INITIAL_DIR/PhysicsTools $CMSSW_BASE/src/
 mv $INITIAL_DIR/CommonTools $CMSSW_BASE/src/
