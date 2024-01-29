@@ -23,7 +23,7 @@ touch blank.txt
 xrdcp blank.txt ${2}touch.txt
 
 echo '&&& run xrdcp &&&'
-xrdcp -v -r --retry=2 $1 $2
+xrdcp -v -r --retry=1 $1 $2
 
 echo ''
 echo '&&& Finished &&&'
