@@ -78,7 +78,7 @@ if [ $4 == "data" ]; then
 elif [ $4 == "mc" ]; then
   cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
 elif [ $4 == "sigRes" ]; then
-  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1 photonsf=True
 elif [ $4 == "sigNonRes" ]; then
   cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
 else
