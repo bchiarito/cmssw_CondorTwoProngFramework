@@ -62,11 +62,17 @@ if output_area[0:7] == '/store/':
 
 # get the schedd
 if args.verbose: print("DEBUG: Get Schedd")
-coll = htcondor.Collector()
-schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
-for s in schedd_query:
-  if str(s["Name"]) == str(schedd_name):
-    schedd_ad = s
+if site == 'hexcms':
+  coll = htcondor.Collector()
+  schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
+  schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
+if site == 'cmslpc':
+  collector = htcondor.Collector()
+  coll_query = collector.query(htcondor.AdTypes.Schedd, \
+  constraint='FERMIHTC_DRAIN_LPCSCHEDD=?=FALSE && FERMIHTC_SCHEDD_TYPE=?="CMSLPC"',
+  projection=["Name", "MyAddress"]
+  )
+  schedd_ad = coll_query[0]
 schedd = htcondor.Schedd(schedd_ad)
 if args.verbose: print("DEBUG:", schedd_ad["Name"])
 
