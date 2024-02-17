@@ -135,6 +135,8 @@ run_args.add_argument("--scheddLimit", type=int, metavar='INT', default=-1,
 help="maximum total idle + running on schedd")
 run_args.add_argument("--useLFN", default=False, action="store_true",
 help="do not use xrdcp, supply LFN directly to cmssw cfg")
+run_args.add_argument("--redirector", metavar='CHOICE', choices=['global', 'usa'], default='usa',
+help="change redirector when running on a dataset")
 
 # convenience
 other_args = parser.add_argument_group('misc options')
@@ -429,7 +431,9 @@ if args.input_cmslpc:
   to_replace['__redirector__'] = 'root://cmseos.fnal.gov/'
   to_replace['__copycommand__'] = 'xrdcp --nopbar'
 if args.input_dataset:
-  to_replace['__redirector__'] = 'root://cmsxrootd.fnal.gov/'
+  if args.redirector == 'usa': redirector = 'root://cmsxrootd.fnal.gov/'
+  elif args.redirector == 'global': redirector = 'root://cms-xrd-global.cern.ch/'
+  to_replace['__redirector__'] = redirector
   if args.useLFN: to_replace['__copycommand__'] = 'NULL'
   else: to_replace['__copycommand__'] = 'xrdcp --nopbar'
 use_template_to_replace(template_filename, new_unpacker_filename, to_replace)
