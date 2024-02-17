@@ -36,7 +36,9 @@ scramv1 project CMSSW CMSSW_10_6_27
 cd CMSSW_10_6_27/src
 eval `scramv1 runtime -sh`
 mv $INITIAL_DIR/PhysicsTools $CMSSW_BASE/src/
-mv $INITIAL_DIR/CommonTools $CMSSW_BASE/src/
+mv $INITIAL_DIR/EgammaAnalysis $CMSSW_BASE/src/
+mv $INITIAL_DIR/EgammaPostRecoTools $CMSSW_BASE/src/
+mv $INITIAL_DIR/RecoEgamma $CMSSW_BASE/src/
 echo ''
 echo '&&& Building (scram b) &&&'
 scramv1 b

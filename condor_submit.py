@@ -473,8 +473,10 @@ for i in range(len(infile_tranches)):
     job_dir+'/'+unpacker_filename + ", " + \
     job_dir+'/'+stageout_filename + ", " + \
     job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC).dat' + ", " + \
-    cmssw_prebuild_area+'/CMSSW_10_6_27/src/PhysicsTools' #+ ", " + \
-    #cmssw_prebuild_area+'/CMSSW_10_6_27/src/CommonTools'
+    cmssw_prebuild_area+'/CMSSW_10_6_27/src/PhysicsTools' + ", " + \
+    cmssw_prebuild_area+'/CMSSW_10_6_27/src/EgammaAnalysis' + ", " + \
+    cmssw_prebuild_area+'/CMSSW_10_6_27/src/EgammaPostRecoTools' + ", " + \
+    cmssw_prebuild_area+'/CMSSW_10_6_27/src/RecoEgamma'
   if not args.lumiMask is None:
     sub['transfer_input_files'] += ", "+args.lumiMask
   sub['transfer_output_files'] = '""'
