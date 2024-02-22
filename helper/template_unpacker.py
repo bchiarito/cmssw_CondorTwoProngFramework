@@ -2,7 +2,7 @@ import sys
 import os
 
 # constants
-input_file_filename = '__inputfilefilenamebase__' + '_' + sys.argv[1] + '.dat'
+input_file_filename = '__inputfilefilenamebase__' + '_' + sys.argv[1] + '__ext__'
 copy_command = '__copycommand__'
 redirector = "__redirector__"
 RETRIES = 0

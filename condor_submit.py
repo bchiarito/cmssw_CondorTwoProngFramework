@@ -111,8 +111,8 @@ exec_args.add_argument("--twoprongExtra", action="store_true", default=False,
 help="modify twoprong object: allow optional extra track")
 exec_args.add_argument("--photonSB", default="None", choices=['None'], metavar='CHOICE',
 help="include photon sideband (default None)")
-exec_args.add_argument("--selection", default="None", choices=['None', 'muon', 'photon', 'trigger'], metavar='CHOICE',
-help="apply event preselection None (default), muon, photon, trigger")
+exec_args.add_argument("--sel", default="None", choices=['None', 'muon', 'photon', 'trigger'], metavar='CHOICE',
+help="preselection: None (default), muon, photon, trigger")
 exec_args.add_argument("--noPayload", default=False, action="store_true",
 help="for testing purposes")
 
@@ -191,15 +191,15 @@ if args.photonSB == 'None':
 if args.photonSB == 'full':
   phoconstructor = 'addLoose'
   photon_sideband = 'Full'
-if args.selection == 'None':
+if args.sel == 'None':
   selection = 'default'
-if args.selection == 'muon':
+if args.sel == 'muon':
   selection = 'muon'
   selection_text = 'slimmedMuons >= 1'
-if args.selection == 'photon':
+if args.sel == 'photon':
   selection = 'photon'
   selection_text = 'slimmedPhotons >= 1'
-if args.selection == 'trigger':
+if args.sel == 'trigger':
   selection = 'muonelectronphoton'
   selection_text = 'slimmedMuons or slimmedElectrons or slimmedPhotons >= 1, and pT>15'
 
@@ -314,8 +314,8 @@ elif args.output_local == False and args.output_cmslpc == False and args.output_
   output_not_set = True
 if output_not_set and site == "hexcms": args.output_local = True
 if output_not_set and site == "cmslpc": args.output_cmslpc = True
-if args.output_cmslpc: redirector = "root://cmseos.fnal.gov/"
-if args.output_hexcms: redirector = "root://ruhex-osgce.rutgers.edu/"
+if args.output_cmslpc: out_redirector = "root://cmseos.fnal.gov/"
+if args.output_hexcms: out_redirector = "root://ruhex-osgce.rutgers.edu/"
 
 # check proxy
 if (site == 'hexcms' and args.input_dataset) or (site == 'hexcms' and args.input_cmslpc):
@@ -372,14 +372,14 @@ if args.output_cmslpc:
 # test output
 if args.output_hexcms:
   os.system('touch blank.txt')
-  ret = os.system('xrdcp --nopbar blank.txt '+ redirector + output_path + "/blank.txt")
+  ret = os.system('xrdcp --nopbar blank.txt '+ out_redirector + output_path + "/blank.txt")
   if not ret == 0: raise SystemExit('ERROR: Failed to xrdcp test file into output eos area!')
   os.system('rm blank.txt')
 if args.output_cmslpc:
   os.system('touch blank.txt')
-  ret = os.system('xrdcp --nopbar blank.txt '+ redirector + output_path)
+  ret = os.system('xrdcp --nopbar blank.txt '+ out_redirector + output_path)
   if not ret == 0: raise SystemExit('ERROR: Failed to xrdcp test file into output eos area!')
-  ret = os.system("eos " + redirector + " rm " + output_path + "/blank.txt &> /dev/null")
+  ret = os.system("eos " + out_redirector + " rm " + output_path + "/blank.txt &> /dev/null")
   if not ret == 0: raise SystemExit('ERROR: Failed eosrm test file from output eos area!')
   os.system('rm blank.txt')
 
@@ -424,6 +424,7 @@ template_filename = helper_dir+"/template_"+unpacker_filename
 new_unpacker_filename = unpacker_filename
 to_replace = {}
 to_replace['__inputfilefilenamebase__'] = input_file_filename_base
+to_replace['__ext__'] = ext
 if args.input_local and site == 'hexcms':
   to_replace['__redirector__'] = ''
   to_replace['__copycommand__'] = 'cp'
@@ -431,9 +432,9 @@ if args.input_cmslpc:
   to_replace['__redirector__'] = 'root://cmseos.fnal.gov/'
   to_replace['__copycommand__'] = 'xrdcp --nopbar'
 if args.input_dataset:
-  if args.redirector == 'usa': redirector = 'root://cmsxrootd.fnal.gov/'
-  elif args.redirector == 'global': redirector = 'root://cms-xrd-global.cern.ch/'
-  to_replace['__redirector__'] = redirector
+  if args.redirector == 'usa': in_redirector = 'root://cmsxrootd.fnal.gov/'
+  elif args.redirector == 'global': in_redirector = 'root://cms-xrd-global.cern.ch/'
+  to_replace['__redirector__'] = in_redirector
   if args.useLFN: to_replace['__copycommand__'] = 'NULL'
   else: to_replace['__copycommand__'] = 'xrdcp --nopbar'
 use_template_to_replace(template_filename, new_unpacker_filename, to_replace)
@@ -448,7 +449,7 @@ if args.output_local:
   to_replace['__redirector__'] = ''
   to_replace['__copycommand__'] = 'cp'
 if args.output_cmslpc or args.output_hexcms:
-  to_replace['__redirector__'] = redirector
+  to_replace['__redirector__'] = out_redirector
   to_replace['__copycommand__'] = 'xrdcp --nopbar'
 use_template_to_replace(template_filename, new_stageout_filename, to_replace)
 
@@ -476,7 +477,7 @@ for i in range(len(infile_tranches)):
   sub['transfer_input_files'] = \
     job_dir+'/'+unpacker_filename + ", " + \
     job_dir+'/'+stageout_filename + ", " + \
-    job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC).dat' + ", " + \
+    job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC)'+ext + ", " + \
     cmssw_prebuild_area+'/CMSSW_10_6_27/src/PhysicsTools' + ", " + \
     cmssw_prebuild_area+'/CMSSW_10_6_27/src/EgammaAnalysis' + ", " + \
     cmssw_prebuild_area+'/CMSSW_10_6_27/src/EgammaPostRecoTools' + ", " + \
@@ -569,7 +570,7 @@ if args.twoprongExtra:
   print("Object Modification : " + "TwoProng Optional Extra Track")
 if not args.photonSB=='None':
   print("Photon Sideband     : " + photon_sideband)
-if not args.selection=='None':
+if not args.sel=='None':
   print("Preselection        : " + selection_text)
 print("Total Jobs          :", str(TOTAL_JOBS))
 print("Total Files         :", str(num_total_files))

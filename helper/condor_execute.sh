@@ -67,6 +67,7 @@ echo '&&& cd to PhysicsTools/PFNano/test/ and bring rootfiles from initial dir &
 cd PhysicsTools/PFNano/test/
 export CMSRUN_DIR=$(pwd)
 mv $INITIAL_DIR/infiles_$3.dat .
+mv $INITIAL_DIR/infiles_$3.txt .
 mv $INITIAL_DIR/*.root .
 mv $INITIAL_DIR/Cert_*JSON*.txt .
 echo ''
@@ -76,13 +77,17 @@ ls -ldh *
 echo ''
 echo '&&& cmsRun cfg.py &&&'
 if [ $4 == "data" ]; then
-  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=1
+  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.txt goodLumis=$6 maxEvents=1
 elif [ $4 == "mc" ]; then
-  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=1
+  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.txt goodLumis=$6 maxEvents=1
 elif [ $4 == "sigRes" ]; then
-  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1 photonsf=True
+  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=1 photonsf=True
+  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.txt goodLumis=$6 maxEvents=1 photonsf=True
 elif [ $4 == "sigNonRes" ]; then
-  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=-1
+  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=1
+  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.txt goodLumis=$6 maxEvents=1
 else
   echo '&&& ERROR! Could not determine data/mc/signal !!! &&&'
 fi
