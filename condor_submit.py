@@ -127,6 +127,8 @@ num_options.add_argument("--numJobs", type=int, metavar='INT',
 help="total number of subjobs in the job")
 num_options.add_argument("--filesPerJob", type=int, metavar='INT', default=None,
 help="number of files per subjob (default is 1)")
+num_options.add_argument("--jobsPerFile", type=int, metavar='INT', default=None,
+help="One file per job, additional split each file across INT jobs")
 run_args.add_argument("--files", default=-1, type=float, metavar='maxFiles',
 help="total files, <1 treated as a fraction e.g. 0.1 means 10%% (default is all)")
 run_args.add_argument("--trancheMax", type=int, metavar='INT', default=50000,
@@ -402,7 +404,8 @@ for count,set_of_lines in enumerate(grouper(input_files, N, '')):
     for line in set_of_lines:
       if line == '': continue
       fi.write(line.strip()+'\n')
-    input_filenames.append(os.path.basename(fi.name))
+    if args.jobsPerFile == None: input_filenames.append(os.path.basename(fi.name))
+    else: input_filenames.extend([os.path.basename(fi.name)]*args.jobsPerFile)
 TOTAL_JOBS = len(input_filenames)
 
 # create tranches
