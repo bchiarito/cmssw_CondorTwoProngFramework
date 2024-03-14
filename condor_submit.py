@@ -386,14 +386,22 @@ if args.output_cmslpc:
   os.system('rm blank.txt')
 
 # splitting
+if args.numJobs==None and args.filesPerJob==None and args.jobsPerFile==None: args.filesPerJob = 1
 num_total_files = len(input_files)
-if args.numJobs==None and args.filesPerJob==None: args.filesPerJob = 1
-if args.filesPerJob == None:
+if args.filesPerJob:
+  N = args.filesPerJob
+  multipleperfile = False
+elif args.numJobs:
   num_total_jobs = args.numJobs
   num_files_per_job = math.ceil(num_total_files / float(num_total_jobs))
   N = int(num_files_per_job)
-else:
-  N = args.filesPerJob
+  multipleperfile = False
+elif args.jobsPerFile:
+  N = 1
+  input_files = input_files * args.jobsPerFile
+  multipleperfile = True
+
+# create infiles list
 input_filenames = [] # each entry a filename, and the file is a txt file of input filenames one per line
 if args.useLFN: ext = '.txt' # file location taken raw
 else: ext = '.dat' # file location to be parsed by cmssw cfg file
@@ -403,9 +411,9 @@ for count,set_of_lines in enumerate(grouper(input_files, N, '')):
     if set_of_lines[0] == '': continue
     for line in set_of_lines:
       if line == '': continue
-      fi.write(line.strip()+'\n')
-    if args.jobsPerFile == None: input_filenames.append(os.path.basename(fi.name))
-    else: input_filenames.extend([os.path.basename(fi.name)]*args.jobsPerFile)
+      if not multipleperfile: fi.write(line.strip()+' {} {}'.format(1, 1)+'\n')
+      else: fi.write(line.strip()+' {} {}'.format((count%args.jobsPerFile)+1, args.jobsPerFile)+'\n')
+    input_filenames.append(os.path.basename(fi.name))
 TOTAL_JOBS = len(input_filenames)
 
 # create tranches

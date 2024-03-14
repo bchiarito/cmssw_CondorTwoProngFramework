@@ -75,19 +75,24 @@ echo '&&& Current Directory and Contents: &&&'
 pwd
 ls -ldh *
 echo ''
+echo '&&& Get number of rootfile events &&&'
+ROOTFILE_EVENTS=$(edmFileUtil -j $(echo file:$(ls *.root)) | jq '.[0].events')
+echo 'Got:'
+echo ${ROOTFILE_EVENTS}
+echo ''
 echo '&&& cmsRun cfg.py &&&'
 if [ $4 == "data" ]; then
-  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=1
-  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.txt goodLumis=$6 maxEvents=1
+  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py maxEvents=${ROOTFILE_EVENTS} inputFilesFile=infiles_$3.dat goodLumis=$6
+  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py maxEvents=${ROOTFILE_EVENTS} inputFilesFile=infiles_$3.txt goodLumis=$6
 elif [ $4 == "mc" ]; then
-  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=1
-  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py inputFilesFile=infiles_$3.txt goodLumis=$6 maxEvents=1
+  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py maxEvents=${ROOTFILE_EVENTS} inputFilesFile=infiles_$3.dat goodLumis=$6
+  cmsRun -j report.xml NANOAOD_$4_$5_cfg.py maxEvents=${ROOTFILE_EVENTS} inputFilesFile=infiles_$3.txt goodLumis=$6
 elif [ $4 == "sigRes" ]; then
-  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=1 photonsf=True
-  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.txt goodLumis=$6 maxEvents=1 photonsf=True
+  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py maxEvents=${ROOTFILE_EVENTS} inputFilesFile=infiles_$3.dat goodLumis=$6 photonsf=True
+  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py maxEvents=${ROOTFILE_EVENTS} inputFilesFile=infiles_$3.txt goodLumis=$6 photonsf=True
 elif [ $4 == "sigNonRes" ]; then
-  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.dat goodLumis=$6 maxEvents=1
-  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py inputFilesFile=infiles_$3.txt goodLumis=$6 maxEvents=1
+  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py maxEvents=${ROOTFILE_EVENTS} inputFilesFile=infiles_$3.dat goodLumis=$6
+  cmsRun -j report.xml NANOAOD_mc_$5_cfg.py maxEvents=${ROOTFILE_EVENTS} inputFilesFile=infiles_$3.txt goodLumis=$6
 else
   echo '&&& ERROR! Could not determine data/mc/signal !!! &&&'
 fi

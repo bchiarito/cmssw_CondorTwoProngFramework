@@ -14,8 +14,8 @@ if __name__ == "__main__":
 
   with open(input_file_filename) as f:
     for line in f:
-      print "Unpacker: command:", copy_command + " " + redirector + line.strip() + " ."
-      os.system(copy_command + " " + redirector + line.strip() + " .")
+      print "Unpacker: command:", copy_command + " " + redirector + ((line.strip()).split())[0] + " ."
+      os.system(copy_command + " " + redirector + ((line.strip()).split())[0] + " .")
       # retry logic
       #i = line.rfind('/')
       #filename = (line[i+1:len(line)]).strip()
