@@ -42,6 +42,7 @@ parser.add_argument("procs",help="Process numbers to resubmit, e.g.: 1-3,5,6,7")
 parser.add_argument("--batch",help="JobBatchName parameter, displays when using condor_q -batch")
 parser.add_argument("-v", "--verbose", default=False, action="store_true",help="turn on debug messages")
 parser.add_argument("--proxy", default='', help="location of proxy file, only used on hexcms")
+parser.add_argument("--memory", default=None, help="value for 'request_memory'")
 args = parser.parse_args()
 
 # import job
@@ -118,6 +119,7 @@ with open(args.jobDir+'/'+submit_filename) as f:
   submit_string += '\nnoop_job = !stringListMember("$(Process)","'+procs_string+'")'
   submit_string += '\nTEMP = $(Process) + ' + str(first_proc)
   submit_string += '\nGLOBAL_PROC = $INT(TEMP)'
+  if args.memory: submit_string += '\nrequest_memory = '+str(args.memory)
 
 # make submit object
 sub = htcondor.Submit(submit_string)
