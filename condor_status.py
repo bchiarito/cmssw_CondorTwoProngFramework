@@ -40,6 +40,7 @@ parser.add_argument("--onlyResubmits", default=False, action="store_true",help="
 parser.add_argument("--group", default=False, action="store_true",help="group according to job Id status, instead of numerical order")
 parser.add_argument("--aborted", "-a", default = False, action="store_true", help="print a string of 'aborted' job IDs for condor_resubmit.py")
 parser.add_argument("--noOutput", default = False, action="store_true", help="print a string of 'fin w/o output' job IDs for condor_resubmit.py")
+parser.add_argument("--finished", "-f", default = False, action="store_true", help="print a string of 'finished' job IDs for condor_resubmit.py")
 args = parser.parse_args()
 
 # constants
@@ -254,13 +255,14 @@ elif not output_hex: # local
   suffix = output.split()[0].strip()[-1]
   print("Total output size ", size, suffix)
 
-if not args.summary and not args.aborted and not args.noOutput: print(' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
+if not args.summary and not args.aborted and not args.noOutput and not args.finished: print(' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
        'Proc', 'Status', 'Resubs', 'Wall Time', 'Output File', 'Msg'
 ))
 if args.summary: summary = {}
 lines = []
 aborted_jobs = []
 noOutput_jobs = []
+finished_jobs= []
 for jobNum in subjobs:
   subjob = subjobs[jobNum]
   status = subjob.get('status','unsubmitted')
@@ -280,6 +282,7 @@ for jobNum in subjobs:
   if status=='finished' and size=='' and not output_hex:
     status = 'fin w/o output'
     noOutput_jobs.append(jobNum)
+  if status=='finished': finished_jobs.append(jobNum)
   if args.onlyFinished and (status=='submitted' or status=='running' or status=='unsubmitted'): continue
   if args.onlyError and (status=='submitted' or status=='running' or status=='finished' or status=='unsubmitted'): continue
   if args.notFinished and (status=='finished'): continue
@@ -293,7 +296,7 @@ for jobNum in subjobs:
     if status in summary: summary[status] += 1
     else: summary[status] = 1
 
-if not args.summary and not args.aborted and not args.noOutput:
+if not args.summary and not args.aborted and not args.noOutput and not args.finished:
   if args.group:
     def status(line):
       return (line.split('|'))[1]
@@ -320,6 +323,18 @@ if args.aborted and len(aborted_jobs) != 0:
   sys.stdout.write("\n")
 elif args.aborted:
   print("No jobs were aborted")
+
+if args.finished and len(finished_jobs) != 0:
+  x = 0
+  while x < len(finished_jobs):
+      if x == len(finished_jobs) - 1:
+          sys.stdout.write(str(finished_jobs[x]))
+          break
+      sys.stdout.write(str(finished_jobs[x]) + ",")
+      x += 1
+  sys.stdout.write("\n")
+elif args.finished:
+  print("No jobs were finished")
 
 if args.noOutput and len(noOutput_jobs) != 0:
   x = 0
