@@ -176,18 +176,15 @@ if not (args.year == 'UL18' or
   raise SystemExit('ERROR: --year must be one of: UL18, UL17, UL16')
 
 # process choice of modules
-if not args.twoprongExtra:
-  if args.twoprongSB == 'None':
-    constructor = 'default'
-  if args.twoprongSB == 'full':
-    constructor = 'addLoose'
-    twoprong_sideband = 'Isolation and Symmetry'
+if args.twoprongSB == 'None':
+  constructor = 'default'
+if args.twoprongSB == 'full':
+  constructor = 'addLoose'
+  twoprong_sideband = 'Isolation and Symmetry'
+if args.twoprongExtra:
+  extrasettings="extratrack"
 else:
-  if args.twoprongSB == 'None':
-    constructor = 'optionalTrack'
-  if args.twoprongSB == 'full':
-    constructor = 'optionalTrack_addLoose'
-    twoprong_sideband = 'Isolation and Symmetry'
+  extrasettings="Null"
 if args.photonSB == 'None':
   phoconstructor = 'default'
 if args.photonSB == 'full':
@@ -478,7 +475,7 @@ for i in range(len(infile_tranches)):
     sub['arguments'] += " None"
   else:
     sub['arguments'] += " "+os.path.basename(args.lumiMask)
-  sub['arguments'] += " "+constructor+" "+phoconstructor+" "+selection
+  sub['arguments'] += " "+constructor+" "+phoconstructor+" "+selection+" "+extrasettings
   sub['should_transfer_files'] = 'YES'
   sub['+JobFlavor'] = 'longlunch'
   sub['Notification'] = 'Never'

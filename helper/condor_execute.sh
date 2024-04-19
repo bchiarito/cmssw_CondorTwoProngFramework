@@ -114,23 +114,35 @@ ls -ldh *.root
 echo ''
 echo '&&& cmsRun completed &&&'
 echo ''
+
 echo '&&& Run NanoAODTools postprocessor &&&'
-mv ../../../PhysicsTools/NanoAODTools/test/dropPF.txt .
-mv ../../../PhysicsTools/NanoAODTools/test/copy_tree.py .
-if [ $4 == "data" ]; then
-  #python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main filtersConstr_$5,twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
-  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
-elif [ $4 == "mc" ]; then
-  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
-elif [ $4 == "sigRes" ]; then
-  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main genpartConstr_res,twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
-elif [ $4 == "sigNonRes" ]; then
-  python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main genpartConstr_nonres,twoprongConstr_$7,photonConstr_$8,selectionConstr_$9 --bo dropPF.txt
-else
-  echo '&&& ERROR! Could not determine data/mc/signal !!! &&&'
+# run twoprong and photon modules
+python ../../NanoAODTools/scripts/nano_postproc.py . $CMSRUN_DIR/NanoAOD.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_$7,photonConstr_$8
+# run modified twoprong module
+if [[ "${10}" == "extratrack" && "$7" == "addLoose" ]]; then
+  python ../../NanoAODTools/scripts/nano_postproc.py . NanoAOD_Skim.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_optionalTrack_addLoose
+  mv NanoAOD_Skim_Skim.root NanoAOD_Skim.root
+elif [[ "${10}" == "extratrack"  && "$7" == "default" ]]; then
+  python ../../NanoAODTools/scripts/nano_postproc.py . NanoAOD_Skim.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main twoprongConstr_optionalTrack
+  mv NanoAOD_Skim_Skim.root NanoAOD_Skim.root
 fi
+# run signal modules
+if [[ $4 == "sigRes" ]]; then
+  python ../../NanoAODTools/scripts/nano_postproc.py . NanoAOD_Skim.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main genpartConstr_res
+  mv NanoAOD_Skim_Skim.root NanoAOD_Skim.root
+fi
+if [[ $4 == "sigNonRes" ]]; then
+  python ../../NanoAODTools/scripts/nano_postproc.py . NanoAOD_Skim.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main genpartConstr_nonres
+  mv NanoAOD_Skim_Skim.root NanoAOD_Skim.root
+fi
+# run selection module and drop branches
+mv ../../../PhysicsTools/NanoAODTools/test/dropPF.txt .
+python ../../NanoAODTools/scripts/nano_postproc.py . NanoAOD_Skim.root -I PhysicsTools.NanoAODTools.postprocessing.modules.main selectionConstr_$9 --bo dropPF.txt
+mv NanoAOD_Skim_Skim.root NanoAOD_Skim.root
+
 echo ''
 echo '&&& Run copy_tree.py &&&'
+mv ../../../PhysicsTools/NanoAODTools/test/copy_tree.py .
 python copy_tree.py NanoAOD_Skim.root
 
 echo ''
