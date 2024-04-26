@@ -101,7 +101,7 @@ datamc_options.add_argument("--sigRes", action="store_true", default=False,
 help="running on resonant signal mc")
 datamc_options.add_argument("--sigNonRes", action="store_true", default=False,
 help="running on nonresonant signal mc")
-exec_args.add_argument("-y", "--year", default="UL18", choices=['ULpostVFP', 'UL16preVFP','UL17','UL18'], metavar='ULYY',
+exec_args.add_argument("-y", "--year", default="UL18", choices=['UL16postVFP', 'UL16preVFP','UL17','UL18'], metavar='ULYY',
 help="prescription to follow: UL18 (default)")
 exec_args.add_argument("-l", "--lumiMask", default=None, metavar='', dest='lumiMask',
 help="path to lumi mask json file")
