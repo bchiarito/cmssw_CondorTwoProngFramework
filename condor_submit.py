@@ -101,8 +101,8 @@ datamc_options.add_argument("--sigRes", action="store_true", default=False,
 help="running on resonant signal mc")
 datamc_options.add_argument("--sigNonRes", action="store_true", default=False,
 help="running on nonresonant signal mc")
-exec_args.add_argument("-y", "--year", default="UL18", choices=['UL16','UL17','UL18'], metavar='ULYY',
-help="prescription to follow: UL18 (default), UL17, UL16")
+exec_args.add_argument("-y", "--year", default="UL18", choices=['ULpostVFP', 'UL16preVFP','UL17','UL18'], metavar='ULYY',
+help="prescription to follow: UL18 (default)")
 exec_args.add_argument("-l", "--lumiMask", default=None, metavar='', dest='lumiMask',
 help="path to lumi mask json file")
 exec_args.add_argument("--twoprongSB", default="None", choices=['None','full'], metavar='CHOICE',
@@ -168,12 +168,6 @@ if datamc != 'data' and not args.lumiMask == None:
   raise SystemExit("Configuration Error: Using lumi mask with MC!")
 if datamc == 'data' and args.lumiMask == None:
   raise SystemExit("Configuration Error: Running on data, but provided no lumi mask!")
-
-# check year
-if not (args.year == 'UL18' or
-        args.year == 'UL17' or
-        args.year == 'UL16'):
-  raise SystemExit('ERROR: --year must be one of: UL18, UL17, UL16')
 
 # process choice of modules
 if args.twoprongSB == 'None':
