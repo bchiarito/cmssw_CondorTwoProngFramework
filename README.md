@@ -24,27 +24,34 @@ git clone git@github.com:bchiarito/cmssw_CondorTwoProngFramework.git
 cd cmssw_CondorTwoProngFramework
 ```
 
-Before starting to process a new dataset, make sure you do ```git pull``` from inside cmssw_CondorTwoProngFramework/
+* Before starting to process a new dataset, make sure you do ```git pull``` from inside cmssw_CondorTwoProngFramework/
 
-Set up your grid proxy with ```voms-proxy-init --valid 192:00 -voms cms```
+* Set up your grid proxy with ```voms-proxy-init --valid 192:00 -voms cms```
 
-For instructions, run:
+* For a description of all arguments in the submit script, run ```./condor_submit.py --help```
+
+* If you already did cmsenv in this shell session, you will see an error message saying something like ```ERROR: Could not import classad or htcondor.``` To unset, do: 
+```eval `scram unsetenv -sh```
+
+## Sample submit commands (3 May 2024)
+
+### Data: 
 ```
-$ ./condor_submit.py --help
+./condor_submit.py YOUR_DATA_DATASET /store/user/YOUR_LPC_EOS_ROOTFILE_OUTPUT_AREA --data --twoprongSB full -y YEAR(UL18/UL17/UL16postVFP/UL16preVFP) -l lumimasks/GOLDEN_JSON_FOR_THE_RELEVANT_YEAR.txt -d YOUR_JOB_DIR -v -f --jobsPerFile=3  --rebuild --twoprongExtra
 ```
 
-If you already did cmsenv in this shell session, you will see an error message saying something like ```ERROR: Could not import classad or htcondor.``` To unset, do: 
-```eval `scram unsetenv -sh````
-
-##Sample commands (3 May 2024)
-
-Data: 
+For eg:
 ```
 ./condor_submit.py /SingleMuon/Run2017C-UL2017_MiniAODv2-v1/MINIAOD /store/user/lpcrutgers/sthayil/pseudoaxions/nano/singlemuonC_2017_03-24/ --data --twoprongSB full -y UL17 -l lumimasks/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt -d singlemuonC_2017_03-24 -v -f --jobsPerFile=3  --rebuild --twoprongExtra
 ```
 Make sure that you're using --jobsPerFile=3 (or greater)for data, else the jobs won't finish within 48 hours and will be automatically terminated
 
-MC:
+### MC:
+```
+./condor_submit.py YOUR_MC_DATASET /store/user/YOUR_LPC_EOS_ROOTFILE_OUTPUT_AREA --mc --twoprongSB full -y YEAR(UL18/UL17/UL16postVFP/UL16preVFP) -d YOUR_JOB_DIR -f -v --rebuild --twoprongExtra
+```
+
+For eg:
 ```
 ./condor_submit.py /DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/RunIISummer20UL17MiniAODv2-106X_mc2017_realistic_v9-v2/MINIAODSIM /store/user/lpcrutgers/sthayil/pseudoaxions/nano/dyjetstoll_2017_03-24/ --twoprongSB full -y UL17 -d dyjetstoll_2017_03-24 --mc -f -v --rebuild --twoprongExtra
 ```
