@@ -21,6 +21,7 @@ helper_dir = 'helper'
 executable = 'condor_execute.sh'
 executable_fast = 'condor_execute_fast.sh'
 src_setup_script = 'prebuild_setup.sh' # also in unit test scripts
+src_setupv1_script = 'prebuildv1_setup.sh' # also in unit test scripts
 submit_file_filename = 'submit_file.jdl'
 input_file_filename_base = 'infiles' # also in executable
 finalfile_filename = 'NANOAOD'
@@ -32,6 +33,7 @@ fix_condor_hexcms_script = 'hexcms_fix_python.sh'
 hexcms_proxy_script = 'hexcms_proxy_setup.sh'
 hexcms_proxy_script_timeleft = 'hexcms_proxy_timeleft.sh'
 cmssw_prebuild_area = 'prebuild'
+cmssw_prebuild_area_v1 = 'prebuild_v1'
 
 # subroutines
 def grouper(iterable, n, fillvalue=None):
@@ -113,6 +115,8 @@ exec_args.add_argument("--photonSB", default="None", choices=['None'], metavar='
 help="include photon sideband (default None)")
 exec_args.add_argument("--sel", default="None", choices=['None', 'muon', 'photon', 'trigger'], metavar='CHOICE',
 help="preselection: None (default), muon, photon, trigger")
+exec_args.add_argument("--ver", default="v2", choices=['v1', 'v2'], metavar='vX',
+help="miniaod version of input")
 exec_args.add_argument("--noPayload", default=False, action="store_true",
 help="for testing purposes")
 
@@ -146,6 +150,8 @@ other_args.add_argument("-f", "--force", action="store_true",
 help="overwrite job directory if it already exists")
 other_args.add_argument("--rebuild", default=False, action="store_true",
 help="remake cmssw prebuild area needed to ship with job")
+other_args.add_argument("--rebuildv1", default=False, action="store_true",
+help="remake cmssw prebuild area (miniaodv1 code) needed to ship with job")
 other_args.add_argument("-t", "--test", default=False, action="store_true",
 help="don't submit condor jobs but do all other steps")
 other_args.add_argument("-v", "--verbose", default=False, action="store_true",
@@ -211,8 +217,14 @@ if args.rebuild:
   print("Setting up src directory (inside ./"+cmssw_prebuild_area+") to ship with job")
   os.system('./' + helper_dir +'/'+ src_setup_script)
   print("\nFinished setting up directory to ship with job.\n")
-if not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
+if args.rebuildv1:
+  print("Setting up src (miniaodv1 version) directory (inside ./"+cmssw_prebuild_area_v1+") to ship with job")
+  os.system('./' + helper_dir +'/'+ src_setupv1_script)
+  print("\nFinished setting up directory to ship with job.\n")
+if args.ver == 'v2' and not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
+if args.ver == 'v1' and not args.rebuildv1 and not os.path.isdir(cmssw_prebuild_area_v1):
+  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuildv1 to create")
 
 # check input
 input_not_set = False
@@ -329,7 +341,8 @@ if site == 'cmslpc':
 
 # get git hash/tag
 tag_info_frontend = subprocess.getoutput("git describe --tags --long")
-tag_info_backend = subprocess.getoutput("cd {}/*/src/; git describe --tags --long".format(cmssw_prebuild_area))
+if args.ver == 'v2': tag_info_backend = subprocess.getoutput("cd {}/*/src/; git describe --tags --long".format(cmssw_prebuild_area))
+if args.ver == 'v1': tag_info_backend = subprocess.getoutput("cd {}/*/src/; git describe --tags --long".format(cmssw_prebuild_area_v1))
 tag_info_frontend = tag_info_frontend.split('-')
 tag_info_backend = tag_info_backend.split('-')
 f_tag = tag_info_frontend[0]
@@ -469,14 +482,16 @@ for i in range(len(infile_tranches)):
     sub['arguments'] += " None"
   else:
     sub['arguments'] += " "+os.path.basename(args.lumiMask)
-  sub['arguments'] += " "+constructor+" "+phoconstructor+" "+selection+" "+extrasettings
+  sub['arguments'] += " "+constructor+" "+phoconstructor+" "+selection+" "+extrasettings+" "+args.ver
   sub['should_transfer_files'] = 'YES'
   sub['+JobFlavor'] = 'longlunch'
   sub['Notification'] = 'Never'
   if site == 'cmslpc': sub['use_x509userproxy'] = 'true'
   if site == 'hexcms' and args.input_dataset: sub['x509userproxy'] = os.path.basename(proxy_path)
   if site == 'hexcms' and args.input_cmslpc: sub['x509userproxy'] = os.path.basename(proxy_path)
-  sub['transfer_input_files'] = \
+
+  if args.ver == 'v2':
+    sub['transfer_input_files'] = \
     job_dir+'/'+unpacker_filename + ", " + \
     job_dir+'/'+stageout_filename + ", " + \
     job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC)'+ext + ", " + \
@@ -484,6 +499,14 @@ for i in range(len(infile_tranches)):
     cmssw_prebuild_area+'/CMSSW_10_6_27/src/EgammaAnalysis' + ", " + \
     cmssw_prebuild_area+'/CMSSW_10_6_27/src/EgammaPostRecoTools' + ", " + \
     cmssw_prebuild_area+'/CMSSW_10_6_27/src/RecoEgamma'
+  if args.ver == 'v1':
+    sub['transfer_input_files'] = \
+    job_dir+'/'+unpacker_filename + ", " + \
+    job_dir+'/'+stageout_filename + ", " + \
+    job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC)'+ext + ", " + \
+    cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/PhysicsTools' + ", " + \
+    cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/CommonTools'
+
   if not args.lumiMask is None:
     sub['transfer_input_files'] += ", "+args.lumiMask
   sub['transfer_output_files'] = '""'

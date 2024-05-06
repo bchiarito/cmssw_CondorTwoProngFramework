@@ -30,15 +30,28 @@ echo ''
 echo '&&& Setup CMSSW area &&&'
 export HOME=$INITIAL_DIR
 export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
-export SCRAM_ARCH=slc7_amd64_gcc820
 source $VO_CMS_SW_DIR/cmsset_default.sh
-scramv1 project CMSSW CMSSW_10_6_27
-cd CMSSW_10_6_27/src
-eval `scramv1 runtime -sh`
-mv $INITIAL_DIR/PhysicsTools $CMSSW_BASE/src/
-mv $INITIAL_DIR/EgammaAnalysis $CMSSW_BASE/src/
-mv $INITIAL_DIR/EgammaPostRecoTools $CMSSW_BASE/src/
-mv $INITIAL_DIR/RecoEgamma $CMSSW_BASE/src/
+
+if [[ ${11} == "v2" ]]; then
+  export SCRAM_ARCH=slc7_amd64_gcc820
+  scramv1 project CMSSW CMSSW_10_6_27
+  cd CMSSW_10_6_27/src
+  eval `scramv1 runtime -sh`
+  mv $INITIAL_DIR/PhysicsTools $CMSSW_BASE/src/
+  mv $INITIAL_DIR/EgammaAnalysis $CMSSW_BASE/src/
+  mv $INITIAL_DIR/EgammaPostRecoTools $CMSSW_BASE/src/
+  mv $INITIAL_DIR/RecoEgamma $CMSSW_BASE/src/
+fi
+
+if [[ ${11} == "v1" ]]; then
+  export SCRAM_ARCH=slc7_amd64_gcc700
+  scramv1 project CMSSW CMSSW_10_6_19_patch2
+  cd CMSSW_10_6_19_patch2/src
+  eval `scramv1 runtime -sh`
+  mv $INITIAL_DIR/PhysicsTools $CMSSW_BASE/src/
+  mv $INITIAL_DIR/CommonTools $CMSSW_BASE/src/
+fi
+
 echo ''
 echo '&&& Building (scram b) &&&'
 scramv1 b
