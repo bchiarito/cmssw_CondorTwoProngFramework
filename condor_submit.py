@@ -519,6 +519,7 @@ for i in range(len(infile_tranches)):
     sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
   sub['log'] = job_dir+'/log_$(Cluster).txt'
   if not args.scheddLimit==-1: sub['max_materialize'] = str(args.scheddLimit)
+  sub['+SingularityImage'] = '"/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el7:x86_64"'
   subs.append(sub)
 
 # make job directory
