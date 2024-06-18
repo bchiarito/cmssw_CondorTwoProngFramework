@@ -21,6 +21,7 @@ helper_dir = 'helper'
 executable = 'condor_execute.sh'
 executable_fast = 'condor_execute_fast.sh'
 src_setup_script = 'prebuild_setup.sh' # also in unit test scripts
+src_setup_script_alma8 = 'prebuild_setup_alma8.sh' # also in unit test scripts
 src_setupv1_script = 'prebuildv1_setup.sh' # also in unit test scripts
 submit_file_filename = 'submit_file.jdl'
 input_file_filename_base = 'infiles' # also in executable
@@ -143,6 +144,8 @@ run_args.add_argument("--useLFN", default=False, action="store_true",
 help="do not use xrdcp, supply LFN directly to cmssw cfg")
 run_args.add_argument("--redirector", metavar='CHOICE', choices=['global', 'usa'], default='usa',
 help="change redirector when running on a dataset")
+run_args.add_argument("--centos_condor", default=False, action="store_true",
+help="submit to old cent os condor nodes")
 
 # convenience
 other_args = parser.add_argument_group('misc options')
@@ -212,19 +215,48 @@ if args.scheddLimit == -1:
   if site == 'hexcms': args.scheddLimit = 350
   if site == 'cmslpc': args.scheddLimit = 1000
 
+import platform
+if "alma" in platform.platform(): current_os = "alma8"
+elif 'centos' in platform.platform(): current_os = "sl7"
+"""
 # prepare prebuild area to send with job
 if args.rebuild:
   print("Setting up src directory (inside ./"+cmssw_prebuild_area+") to ship with job")
-  os.system('./' + helper_dir +'/'+ src_setup_script)
-  print("\nFinished setting up directory to ship with job.\n")
+  if current_os == 'alma8':
+    os.system('./' + helper_dir +'/'+ src_setup_script_alma8)
+    print("\nFinished setting up directory to ship with job.\n")
+  elif current_os == 'sl7':
+    os.system('./' + helper_dir +'/'+ src_setup_script)
+    print("\nFinished setting up directory to ship with job.\n")
 if args.rebuildv1:
   print("Setting up src (miniaodv1 version) directory (inside ./"+cmssw_prebuild_area_v1+") to ship with job")
-  os.system('./' + helper_dir +'/'+ src_setupv1_script)
-  print("\nFinished setting up directory to ship with job.\n")
+  if current_os == 'alma8':
+    os.system('./' + helper_dir +'/'+ src_setupv1_script_alma8)
+    print("\nFinished setting up directory to ship with job.\n")
+  elif current_os == 'sl7':
+    pass
 if args.ver == 'v2' and not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 if args.ver == 'v1' and not args.rebuildv1 and not os.path.isdir(cmssw_prebuild_area_v1):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuildv1 to create")
+"""
+
+print("Setting up src directory to ship with job")
+os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver)
+"""
+if args.rebuild and current_os == "sl7":
+    os.system('./' + helper_dir +'/'+ src_setup_script)
+if args.rebuild and current_os == "alma8":
+    os.system('./' + helper_dir +'/'+ src_setup_script_alma8)
+if args.rebuildv1 and current_os == "sl7":
+    os.system('./' + helper_dir +'/'+ src_setupv1_script)
+if args.rebuildv1 and current_os == "alma8":
+    os.system('./' + helper_dir +'/'+ src_setupv1_script_alma8)
+"""
+print("\nFinished setting up directory to ship with job.\n")
+
+
+
 
 # check input
 input_not_set = False
@@ -604,6 +636,7 @@ print("Files/Job (approx)  :", str(N))
 print("Input               : " + i_assume)
 if len(input_files)>1: print("Example Input File  : " + ((ex_in[:88] + '..') if len(ex_in) > 90 else ex_in))
 else : print("Input File          : " + ((ex_in[:88] + '..') if len(ex_in) > 90 else ex_in))
+print("miniAOD ver         : " + args.ver)
 print("Output              : " + o_assume)
 print("Output Directory    :", output_path)
 if not args.lumiMask is None:
