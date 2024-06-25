@@ -90,7 +90,7 @@ ls -ldh *
 echo ''
 echo '&&& Get number of rootfile events &&&'
 #ROOTFILE_EVENTS=$(edmFileUtil -j $(echo file:$(ls *.root)) | jq '.[0].events')
-ROOTFILE_EVENTS=10
+ROOTFILE_EVENTS=-1
 echo 'Got:'
 echo ${ROOTFILE_EVENTS}
 echo ''
