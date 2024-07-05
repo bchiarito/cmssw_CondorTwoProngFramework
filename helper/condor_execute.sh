@@ -31,6 +31,7 @@ echo '&&& Setup CMSSW area &&&'
 export HOME=$INITIAL_DIR
 export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
 source $VO_CMS_SW_DIR/cmsset_default.sh
+echo '&&& now cmsrel &&&'
 
 if [[ ${11} == "v2" ]]; then
   export SCRAM_ARCH=slc7_amd64_gcc820
@@ -89,7 +90,8 @@ pwd
 ls -ldh *
 echo ''
 echo '&&& Get number of rootfile events &&&'
-ROOTFILE_EVENTS=$(edmFileUtil -j $(echo file:$(ls *.root)) | /home/joey/jq/jq-linux64 '.[0].events')
+#ROOTFILE_EVENTS=$(edmFileUtil -j $(echo file:$(ls *.root)) | /home/joey/jq/jq-linux64 '.[0].events')
+ROOTFILE_EVENTS=$(edmFileUtil -j $(echo file:$(ls *.root)) | $INITIAL_DIR/jq-linux64 '.[0].events')
 echo 'Got:'
 echo ${ROOTFILE_EVENTS}
 echo ''

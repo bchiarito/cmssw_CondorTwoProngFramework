@@ -216,6 +216,7 @@ if args.scheddLimit == -1:
   if site == 'cmslpc': args.scheddLimit = 1000
 
 import platform
+current_os = "alma8"
 if "alma" in platform.platform(): current_os = "alma8"
 elif 'centos' in platform.platform(): current_os = "sl7"
 """
@@ -394,6 +395,7 @@ base = args.output
 if base[-1] == '/': base = base[:-1]
 timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 output_path = base+'/'+timestamp+'/'+f_dir_string+"_"+b_dir_string
+print("debug", output_path)
 if args.output_local and args.output_hexcms:
   raise SystemExit('ERROR: If sending output to hexcms, please specify eos path (/store/user/..) and not local path (/cms/..).')
 if args.output_local:
@@ -524,6 +526,7 @@ for i in range(len(infile_tranches)):
 
   if args.ver == 'v2':
     sub['transfer_input_files'] = \
+    "jq-linux64, " + \
     job_dir+'/'+unpacker_filename + ", " + \
     job_dir+'/'+stageout_filename + ", " + \
     job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC)'+ext + ", " + \
@@ -533,6 +536,7 @@ for i in range(len(infile_tranches)):
     cmssw_prebuild_area+'/CMSSW_10_6_27/src/RecoEgamma'
   if args.ver == 'v1':
     sub['transfer_input_files'] = \
+    "jq-linux64, " + \
     job_dir+'/'+unpacker_filename + ", " + \
     job_dir+'/'+stageout_filename + ", " + \
     job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC)'+ext + ", " + \
@@ -551,7 +555,8 @@ for i in range(len(infile_tranches)):
     sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
   sub['log'] = job_dir+'/log_$(Cluster).txt'
   if not args.scheddLimit==-1: sub['max_materialize'] = str(args.scheddLimit)
-  sub['+SingularityImage'] = '"/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el7:x86_64"'
+  #sub['+SingularityImage'] = '"/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el7:x86_64"'
+  sub['+DesiredOS'] = '"SL7"'
   subs.append(sub)
 
 # make job directory

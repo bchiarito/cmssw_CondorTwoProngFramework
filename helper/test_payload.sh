@@ -1,9 +1,9 @@
 #! /bin/sh
-source /home/joey/alma8_setups/setup_inside_cmssw-el7_apptainer.sh
+#source /home/joey/alma8_setups/setup_inside_cmssw-el7_apptainer.sh
 #cmsrel CMSSW_10_6_27
-#export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
-#source $VO_CMS_SW_DIR/cmsset_default.sh
-#export SCRAM_ARCH=slc7_amd64_gcc820 # note gcc700 will give error when running pfnano code
+export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
+source $VO_CMS_SW_DIR/cmsset_default.sh
+export SCRAM_ARCH=slc7_amd64_gcc820 # note gcc700 will give error when running pfnano code
 #source /home/joey/alma8_setups/setup_inside_cmssw-el7_apptainer.sh
 #source ~/.setup_cmssw_old.sh
 rm -rf prebuild
