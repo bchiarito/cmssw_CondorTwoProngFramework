@@ -90,7 +90,7 @@ pwd
 ls -ldh *
 echo ''
 echo '&&& Get number of rootfile events &&&'
-#ROOTFILE_EVENTS=$(edmFileUtil -j $(echo file:$(ls *.root)) | /home/joey/jq/jq-linux64 '.[0].events')
+cp /home/joey/jq/jq-linux64 $INITIAL_DIR/
 ROOTFILE_EVENTS=$(edmFileUtil -j $(echo file:$(ls *.root)) | $INITIAL_DIR/jq-linux64 '.[0].events')
 echo 'Got:'
 echo ${ROOTFILE_EVENTS}

@@ -215,49 +215,22 @@ if args.scheddLimit == -1:
   if site == 'hexcms': args.scheddLimit = 350
   if site == 'cmslpc': args.scheddLimit = 1000
 
+# prebuild cmssw area
 import platform
 current_os = "alma8"
 if "alma" in platform.platform(): current_os = "alma8"
+elif "el9" in platform.platform(): current_os = "alma8"
 elif 'centos' in platform.platform(): current_os = "sl7"
-"""
-# prepare prebuild area to send with job
+print("Setting up src directory to ship with job")
 if args.rebuild:
-  print("Setting up src directory (inside ./"+cmssw_prebuild_area+") to ship with job")
-  if current_os == 'alma8':
-    os.system('./' + helper_dir +'/'+ src_setup_script_alma8)
-    print("\nFinished setting up directory to ship with job.\n")
-  elif current_os == 'sl7':
-    os.system('./' + helper_dir +'/'+ src_setup_script)
-    print("\nFinished setting up directory to ship with job.\n")
+    os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver + ' ' + site)
 if args.rebuildv1:
-  print("Setting up src (miniaodv1 version) directory (inside ./"+cmssw_prebuild_area_v1+") to ship with job")
-  if current_os == 'alma8':
-    os.system('./' + helper_dir +'/'+ src_setupv1_script_alma8)
-    print("\nFinished setting up directory to ship with job.\n")
-  elif current_os == 'sl7':
     pass
 if args.ver == 'v2' and not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 if args.ver == 'v1' and not args.rebuildv1 and not os.path.isdir(cmssw_prebuild_area_v1):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuildv1 to create")
-"""
-
-print("Setting up src directory to ship with job")
-os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver)
-"""
-if args.rebuild and current_os == "sl7":
-    os.system('./' + helper_dir +'/'+ src_setup_script)
-if args.rebuild and current_os == "alma8":
-    os.system('./' + helper_dir +'/'+ src_setup_script_alma8)
-if args.rebuildv1 and current_os == "sl7":
-    os.system('./' + helper_dir +'/'+ src_setupv1_script)
-if args.rebuildv1 and current_os == "alma8":
-    os.system('./' + helper_dir +'/'+ src_setupv1_script_alma8)
-"""
 print("\nFinished setting up directory to ship with job.\n")
-
-
-
 
 # check input
 input_not_set = False
@@ -526,7 +499,6 @@ for i in range(len(infile_tranches)):
 
   if args.ver == 'v2':
     sub['transfer_input_files'] = \
-    "jq-linux64, " + \
     job_dir+'/'+unpacker_filename + ", " + \
     job_dir+'/'+stageout_filename + ", " + \
     job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC)'+ext + ", " + \
@@ -536,12 +508,13 @@ for i in range(len(infile_tranches)):
     cmssw_prebuild_area+'/CMSSW_10_6_27/src/RecoEgamma'
   if args.ver == 'v1':
     sub['transfer_input_files'] = \
-    "jq-linux64, " + \
     job_dir+'/'+unpacker_filename + ", " + \
     job_dir+'/'+stageout_filename + ", " + \
     job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC)'+ext + ", " + \
     cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/PhysicsTools' + ", " + \
     cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/CommonTools'
+
+  if site == 'cmslpc': sub['transfer_input_files'] += ", helper/jq-linux64"
 
   if not args.lumiMask is None:
     sub['transfer_input_files'] += ", "+args.lumiMask
@@ -555,8 +528,8 @@ for i in range(len(infile_tranches)):
     sub['error'] = job_dir+'/stdout/$(Cluster)_$(Process)_out.txt'
   sub['log'] = job_dir+'/log_$(Cluster).txt'
   if not args.scheddLimit==-1: sub['max_materialize'] = str(args.scheddLimit)
-  #sub['+SingularityImage'] = '"/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el7:x86_64"'
-  sub['+DesiredOS'] = '"SL7"'
+  if site == 'hexcms': sub['+SingularityImage'] = '"/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el7:x86_64"'
+  if site == 'cmslpc': sub['+DesiredOS'] = '"SL7"'
   subs.append(sub)
 
 # make job directory
