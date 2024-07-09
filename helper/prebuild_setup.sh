@@ -1,5 +1,5 @@
 #! /bin/sh
-echo $1 $2
+echo $1 $2 $3
 
 if [[ "$1" == "sl7" && "$2" == "v2" ]]; then
 export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
@@ -19,7 +19,8 @@ echo "pass"
 
 elif [[ "$1" == "alma8" && "$2" == "v2" ]]; then
 if [[ "$3" == "hexcms" ]]; then
-cmssw-el7 "--bind /cms --bind /home --bind /users" -- /uscms/home/bchiari1/work/test_payload.sh
+export PATH="/cvmfs/oasis.opensciencegrid.org/mis/apptainer/1.2.5/bin:$PATH"
+cmssw-el7 "--bind /condor --bind /osg --bind /cms --bind /home --bind /users" -- helper/test_payload.sh
 elif [[ "$3" == "cmslpc" ]]; then
 cmssw-el7 "--bind /uscms_data/d1/bchiari1/" -- helper/test_payload.sh
 fi
