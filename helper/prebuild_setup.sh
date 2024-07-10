@@ -1,5 +1,4 @@
 #! /bin/sh
-echo $1 $2 $3
 
 if [[ "$1" == "sl7" && "$2" == "v2" ]]; then
 export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
