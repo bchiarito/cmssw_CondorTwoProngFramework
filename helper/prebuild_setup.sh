@@ -21,7 +21,7 @@ if [[ "$3" == "hexcms" ]]; then
 export PATH="/cvmfs/oasis.opensciencegrid.org/mis/apptainer/1.2.5/bin:$PATH"
 cmssw-el7 "--bind /condor --bind /osg --bind /cms --bind /home --bind /users" -- helper/test_payload.sh
 elif [[ "$3" == "cmslpc" ]]; then
-cmssw-el7 "--bind /uscms_data/d1/bchiari1/" -- helper/test_payload.sh
+cmssw-el7 "--bind /uscms_data/d1/$USER/" -- helper/test_payload.sh
 fi
 
 elif [[ "$1" == "alma8" && "$2" == "v1" ]]; then
