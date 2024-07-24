@@ -33,11 +33,13 @@ parser = argparse.ArgumentParser(description="")
 parser.add_argument("jobDir",help="the condor_submit.py job directory")
 parser.add_argument("-v", "--verbose", default=False, action="store_true",help="turn on debug messages")
 parser.add_argument("-s", "--summary", default=False, action="store_true",help="do not print one line per job, instead summarize number of jobs with each status type")
+parser.add_argument("-t", "--totalOutputSize", default=False, action="store_true",help="print total output size")
 parser.add_argument("--onlyFinished", default=False, action="store_true",help="ignore 'running' and 'submitted' job Ids")
 parser.add_argument("--notFinished", default=False, action="store_true",help="ignore 'finished' job Ids")
 parser.add_argument("--onlyError", default=False, action="store_true",help="ignore 'running', 'submitted', and 'finished, job Ids")
 parser.add_argument("--onlyResubmits", default=False, action="store_true",help="only job Ids resubmitted at least once")
 parser.add_argument("--group", default=False, action="store_true",help="group according to job Id status, instead of numerical order")
+parser.add_argument("--held", default=False, action="store_true",help="only job Ids with held status, also prints a string of 'held' job IDs for condor_resubmit.py")
 parser.add_argument("--aborted", "-a", default = False, action="store_true", help="print a string of 'aborted' job IDs for condor_resubmit.py")
 parser.add_argument("--noOutput", default = False, action="store_true", help="print a string of 'fin w/o output' job IDs for condor_resubmit.py")
 parser.add_argument("--finished", "-f", default = False, action="store_true", help="print a string of 'finished' job IDs for condor_resubmit.py")
@@ -244,16 +246,17 @@ print("Results for ClusterId", cluster, "at schedd", schedd_name, "total time", 
 for count, resubmit_cluster in enumerate(job.resubmits):
   print("  Resubmit", count+1, "ClusterId", resubmit_cluster[0])
 print("Job output area:", output_area)
-if output_eos:
-  output = subprocess.check_output('/uscms/home/bchiari1/util_repo/bin/eosdu -h root://cmseos.fnal.gov/'+output_area, shell=True).decode('utf-8')
-  size = output.strip()[:-1]
-  suffix = output.strip()[-1]
-  print("Total output size ", size, suffix)
-elif not output_hex: # local
-  output = subprocess.check_output('du -hs '+output_area, shell=True).decode('utf-8')
-  size = output.split()[0].strip()[:-1]
-  suffix = output.split()[0].strip()[-1]
-  print("Total output size ", size, suffix)
+if args.totalOutputSize:
+  if output_eos:
+    output = subprocess.check_output('/uscms/home/bchiari1/util_repo/bin/eosdu -h root://cmseos.fnal.gov/'+output_area, shell=True).decode('utf-8')
+    size = output.strip()[:-1]
+    suffix = output.strip()[-1]
+    print("Total output size ", size, suffix)
+  elif not output_hex: # local
+    output = subprocess.check_output('du -hs '+output_area, shell=True).decode('utf-8')
+    size = output.split()[0].strip()[:-1]
+    suffix = output.split()[0].strip()[-1]
+    print("Total output size ", size, suffix)
 
 if not args.summary and not args.aborted and not args.noOutput and not args.finished: print(' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
        'Proc', 'Status', 'Resubs', 'Wall Time', 'Output File', 'Msg'
@@ -261,6 +264,7 @@ if not args.summary and not args.aborted and not args.noOutput and not args.fini
 if args.summary: summary = {}
 lines = []
 aborted_jobs = []
+held_jobs = []
 noOutput_jobs = []
 finished_jobs= []
 for jobNum in subjobs:
@@ -270,6 +274,8 @@ for jobNum in subjobs:
   reason = reason[0:80]
   if status == 'aborted':
     aborted_jobs.append(jobNum)
+  if status == 'held':
+    held_jobs.append(jobNum)
   if 'start_time' in subjob and 'end_time' in subjob:
     totalTime = str(datetime.timedelta(seconds = timegm(subjob['end_time']) - timegm(subjob['start_time'])))
   elif 'start_time' in subjob:
@@ -286,6 +292,7 @@ for jobNum in subjobs:
   if args.onlyFinished and (status=='submitted' or status=='running' or status=='unsubmitted'): continue
   if args.onlyError and (status=='submitted' or status=='running' or status=='finished' or status=='unsubmitted'): continue
   if args.notFinished and (status=='finished'): continue
+  if args.held and (status!='held'): continue
   resubs = subjob.get('resubmitted', '')
   if resubs == 0: resubs = ''
   if args.onlyResubmits and resubs == '': continue  
@@ -312,38 +319,66 @@ if args.summary:
   for status in summary:
     print('{:<15} | {}'.format(str(status), str(summary[status])))
 
-if args.aborted and len(aborted_jobs) != 0:
-  x = 0
-  while x < len(aborted_jobs):
-      if x == len(aborted_jobs) - 1:
-          sys.stdout.write(str(aborted_jobs[x]))
-          break
-      sys.stdout.write(str(aborted_jobs[x]) + ",")
-      x += 1
-  sys.stdout.write("\n")
-elif args.aborted:
-  print("No jobs were aborted")
+if args.aborted and len(aborted_jobs) != 0: 
+  sys.stdout.write(str(aborted_jobs[0])) 
+  x = 1 
+  while x < len(aborted_jobs): 
+      if aborted_jobs[x] == aborted_jobs[x-1] + 1: 
+          while x < len(aborted_jobs) and aborted_jobs[x] == aborted_jobs[x-1] + 1: 
+              x += 1 
+          sys.stdout.write("-"+str(aborted_jobs[x-1])) 
+          if x == len(aborted_jobs): 
+              break 
+      sys.stdout.write(","+str(aborted_jobs[x])) 
+      x += 1 
+  sys.stdout.write("\n") 
+elif args.aborted: 
+  print("No jobs were aborted") 
 
-if args.finished and len(finished_jobs) != 0:
-  x = 0
-  while x < len(finished_jobs):
-      if x == len(finished_jobs) - 1:
-          sys.stdout.write(str(finished_jobs[x]))
-          break
-      sys.stdout.write(str(finished_jobs[x]) + ",")
-      x += 1
-  sys.stdout.write("\n")
-elif args.finished:
+if args.held and len(held_jobs) != 0: 
+  sys.stdout.write(str(held_jobs[0])) 
+  x = 1 
+  while x < len(held_jobs): 
+      if held_jobs[x] == held_jobs[x-1] + 1: 
+          while x < len(held_jobs) and held_jobs[x] == held_jobs[x-1] + 1: 
+              x += 1 
+          sys.stdout.write("-"+str(held_jobs[x-1])) 
+          if x == len(held_jobs): 
+              break 
+      sys.stdout.write(","+str(held_jobs[x])) 
+      x += 1 
+  sys.stdout.write("\n") 
+elif args.held: 
+  print("No jobs were held")
+
+if args.finished and len(finished_jobs) != 0: 
+  sys.stdout.write(str(finished_jobs[0])) 
+  x = 1 
+  while x < len(finished_jobs): 
+      if finished_jobs[x] == finished_jobs[x-1] + 1: 
+          while x < len(finished_jobs) and finished_jobs[x] == finished_jobs[x-1] + 1: 
+              x += 1 
+          sys.stdout.write("-"+str(finished_jobs[x-1])) 
+          if x == len(finished_jobs): 
+              break 
+      sys.stdout.write(","+str(finished_jobs[x])) 
+      x += 1 
+  sys.stdout.write("\n") 
+elif args.finished: 
   print("No jobs were finished")
-
-if args.noOutput and len(noOutput_jobs) != 0:
-  x = 0
-  while x < len(noOutput_jobs):
-      if x == len(noOutput_jobs) - 1:
-          sys.stdout.write(str(noOutput_jobs[x]))
-          break
-      sys.stdout.write(str(noOutput_jobs[x]) + ",")
-      x += 1
-  sys.stdout.write("\n")
-elif args.noOutput:
+ 
+if args.noOutput and len(noOutput_jobs) != 0: 
+  sys.stdout.write(str(noOutput_jobs[0])) 
+  x = 1 
+  while x < len(noOutput_jobs): 
+      if noOutput_jobs[x] == noOutput_jobs[x-1] + 1: 
+          while x < len(noOutput_jobs) and noOutput_jobs[x] == noOutput_jobs[x-1] + 1: 
+              x += 1 
+          sys.stdout.write("-"+str(noOutput_jobs[x-1])) 
+          if x == len(noOutput_jobs): 
+              break 
+      sys.stdout.write(","+str(noOutput_jobs[x])) 
+      x += 1 
+  sys.stdout.write("\n") 
+elif args.noOutput: 
   print("No jobs finished without output")
