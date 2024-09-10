@@ -153,8 +153,8 @@ other_args.add_argument("-f", "--force", action="store_true",
 help="overwrite job directory if it already exists")
 other_args.add_argument("--rebuild", default=False, action="store_true",
 help="remake cmssw prebuild area needed to ship with job")
-other_args.add_argument("--rebuildv1", default=False, action="store_true",
-help="remake cmssw prebuild area (miniaodv1 code) needed to ship with job")
+#other_args.add_argument("--rebuildv1", default=False, action="store_true",
+#help="remake cmssw prebuild area (miniaodv1 code) needed to ship with job")
 other_args.add_argument("-t", "--test", default=False, action="store_true",
 help="don't submit condor jobs but do all other steps")
 other_args.add_argument("-v", "--verbose", default=False, action="store_true",
@@ -224,12 +224,10 @@ elif 'centos' in platform.platform(): current_os = "sl7"
 print("Setting up src directory to ship with job")
 if args.rebuild:
     os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver + ' ' + site)
-if args.rebuildv1:
-    pass
-if args.ver == 'v2' and not args.rebuild and not os.path.isdir(cmssw_prebuild_area):
+if args.ver == 'v2' and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
-if args.ver == 'v1' and not args.rebuildv1 and not os.path.isdir(cmssw_prebuild_area_v1):
-  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuildv1 to create")
+if args.ver == 'v1' and not os.path.isdir(cmssw_prebuild_area_v1):
+  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 print("\nFinished setting up directory to ship with job.\n")
 
 # check input
