@@ -231,17 +231,15 @@ if args.ver == 'v1' and not os.path.isdir(cmssw_prebuild_area_v1):
 print("\nFinished setting up directory to ship with job.\n")
 
 # check input
-input_not_set = False
 if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
    re.match("(?:" + "/.*/.*/MINIAODSIM" + r")\Z", args.input): args.input_dataset = True
 if args.input_local == False and args.input_cmslpc == False and args.input_dataset == False:
-  input_not_set = True
-if input_not_set and site == "hexcms": args.input_local = True
-if input_not_set and site == "cmslpc": args.input_cmslpc = True
+    if site == "hexcms": args.input_local = True
+    if site == "cmslpc": args.input_cmslpc = True
 if args.input_local and site == "cmslpc": raise SystemExit("Configuration Error: cannot use --input_local on cmslpc.")
+if not re.match("(?:" + "/store/.*" + r")\Z", args.input): args.input_cmslpc = False
 input_files = [] # each entry a file location
 s = args.input
-
 # input is .txt file
 if s[len(s)-4:len(s)] == ".txt":
   with open(args.input) as f:
@@ -276,6 +274,7 @@ elif args.input_cmslpc:
     totalfiles = len(list_of_files) 
     if percentmax: maxfiles = int(args.files * totalfiles)
     for line in list_of_files:
+      if "[ERROR]" in line: break
       while not line[len(line)-5:len(line)]=='.root':
         sub = subprocess.getoutput("xrdfs root://cmseos.fnal.gov ls " + line)
         line = sub
