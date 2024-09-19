@@ -20,7 +20,7 @@ Output may be
 
 To set up, do: 
 ```
-git clone git@github.com:bchiarito/cmssw_CondorTwoProngFramework.git
+git clone https://github.com/bchiarito/cmssw_CondorTwoProngFramework.git
 cd cmssw_CondorTwoProngFramework
 ```
 
