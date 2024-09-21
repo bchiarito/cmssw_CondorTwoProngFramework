@@ -419,7 +419,7 @@ for count,set_of_lines in enumerate(grouper(input_files, N, '')):
     for line in set_of_lines:
       if line == '': continue
       if not multipleperfile: fi.write(line.strip()+' {} {}'.format(1, 1)+'\n')
-      else: fi.write(line.strip()+' {} {}'.format((count%args.jobsPerFile)+1, args.jobsPerFile)+'\n')
+      else: fi.write(line.strip()+' {} {}'.format(((count-1)%args.jobsPerFile)+1, args.jobsPerFile)+'\n')
     input_filenames.append(os.path.basename(fi.name))
 TOTAL_JOBS = len(input_filenames)
 
