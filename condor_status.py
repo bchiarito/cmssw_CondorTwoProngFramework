@@ -150,7 +150,10 @@ for i, match in enumerate(matches):
   if block['MyType'] == 'JobTerminatedEvent':
     subjobs[int(block['Proc'])]['end_time'] = date
     if block['TerminatedNormally']:
-      subjobs[int(block['Proc'])]['status'] = 'finished'
+      if block['ReturnValue'] == 20:
+        subjobs[int(block['Proc'])]['status'] = 'finNoLumis'
+      else:
+        subjobs[int(block['Proc'])]['status'] = 'finished'
     else:
       subjobs[int(block['Proc'])]['status'] = 'failed'
   if block['MyType'] == 'ShadowExceptionEvent':
@@ -217,7 +220,11 @@ for resubmit_cluster,procs in job.resubmits:
     if block['MyType'] == 'JobTerminatedEvent':
       if block['TotalReceivedBytes'] == 0.0: continue
       subjobs[int(block['Proc'])]['end_time'] = date
-      if block['TerminatedNormally']: subjobs[int(block['Proc'])]['status'] = 'finished'
+      if block['TerminatedNormally']:
+        if block['ReturnValue'] == 20:
+          subjobs[int(block['Proc'])]['status'] = 'finNoLumis'
+        else:
+          subjobs[int(block['Proc'])]['status'] = 'finished'
       else: subjobs[int(block['Proc'])]['status'] = 'failed'
     if block['MyType'] == 'FileTransferEvent' and block['Type'] == 6:
       subjobs[int(block['Proc'])]['end_time'] = date
@@ -290,7 +297,7 @@ for jobNum in subjobs:
     noOutput_jobs.append(jobNum)
   if status=='finished': finished_jobs.append(jobNum)
   if args.onlyFinished and (status=='submitted' or status=='running' or status=='unsubmitted'): continue
-  if args.onlyError and (status=='submitted' or status=='running' or status=='finished' or status=='unsubmitted'): continue
+  if args.onlyError and (status=='submitted' or status=='running' or status=='finished' or status=='unsubmitted' or status=='finNoLumis'): continue
   if args.notFinished and (status=='finished'): continue
   if args.held and (status!='held'): continue
   resubs = subjob.get('resubmitted', '')

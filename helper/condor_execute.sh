@@ -27,6 +27,7 @@ echo '&&& New contents: &&&'
 ls -ldh *
 echo ''
 
+
 echo '&&& Setup CMSSW area &&&'
 export HOME=$INITIAL_DIR
 export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
@@ -90,11 +91,24 @@ pwd
 ls -ldh *
 echo ''
 echo '&&& Get number of rootfile events &&&'
-cp /home/joey/jq/jq-linux64 $INITIAL_DIR/
-ROOTFILE_EVENTS=$(edmFileUtil -j $(echo file:$(ls *.root)) | $INITIAL_DIR/jq-linux64 '.[0].events')
+ROOTFILE_EVENTS=$(edmFileUtil -j $(echo file:$(ls *.root)) | jq '.[0].events')
 echo 'Got:'
 echo ${ROOTFILE_EVENTS}
 echo ''
+if [ $4 == "data" ]; then
+echo '&&& Doing no-good-lumi check &&&'
+edmLumisInFiles.py *.root > lumis_in_file_JSON.txt
+compareJSON.py --and lumis_in_file_JSON.txt $6 > in_JSON.txt
+EMPTY="{}"
+if [ "$EMPTY" == "$(cat in_JSON.txt)" ] ; then
+    echo "Terminate: input rootfile has NO overlap with lumimask"
+    exit 20
+else
+    echo "Continue OK: input rootfile has overlap with lumimask"
+fi
+echo ''
+fi
+
 echo '&&& cmsRun cfg.py &&&'
 
 if [ -f infiles_$3.dat ]; then
