@@ -139,6 +139,9 @@ for proc in procs:
   except Exception:
     pass
 
+# remove held jobs, if any
+print(subprocess.check_output("condor_rm -constraint JobStatus==5 -name {} {}".format(schedd, cluster), shell=True))
+
 # submit the job
 if args.verbose: print("DEBUG: Submitting Jobs")
 with schedd.transaction() as txn:
