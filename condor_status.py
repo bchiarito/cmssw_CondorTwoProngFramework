@@ -23,7 +23,7 @@ try:
   import classad
   import htcondor
 except ImportError as err:
-  if site == 'hexcms':
+  if site == 'hexcms' or site == 'lxplus':
     raise err
   if site == 'cmslpc':
     print('ERROR: Could not import classad or htcondor. Verify that python is default and not from cmssw release (do not cmsenv).')
@@ -76,6 +76,10 @@ if site == 'cmslpc':
   projection=["Name", "MyAddress"]
   )
   schedd_ad = coll_query[0]
+if site == 'lxplus':
+  coll = htcondor.Collector()
+  schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
+  schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
 schedd = htcondor.Schedd(schedd_ad)
 if args.verbose: print("DEBUG:", schedd_ad["Name"])
 

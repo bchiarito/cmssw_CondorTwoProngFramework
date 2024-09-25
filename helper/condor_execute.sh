@@ -19,6 +19,12 @@ if [ -f /osg/current/setup.sh ]; then
   echo ''
 fi
 
+if [ -f x509up ]; then
+  export X509_USER_PROXY=$INITIAL_DIR/x509up
+  voms-proxy-info -all
+  echo ''
+fi
+
 echo '&&& Running input unpacker script with command: &&&'
 echo 'python' $1 $3
 python $1 $3
@@ -28,7 +34,6 @@ ls -ldh *
 echo ''
 
 echo '&&& Setup CMSSW area &&&'
-export HOME=$INITIAL_DIR
 export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
 source $VO_CMS_SW_DIR/cmsset_default.sh
 echo '&&& now cmsrel &&&'
@@ -66,7 +71,7 @@ echo ''
 echo '&&& CMSSW_BASE: &&&'
 echo $CMSSW_BASE
 echo '&&& HOME: &&&'
-echo $HOME
+echo $INITIAL_DIR
 echo '&&& ROOTSYS: &&&'
 echo $ROOTSYS
 echo '&&& ROOT version &&&'
@@ -90,8 +95,12 @@ pwd
 ls -ldh *
 echo ''
 echo '&&& Get number of rootfile events &&&'
-cp /home/joey/jq/jq-linux64 $INITIAL_DIR/
-ROOTFILE_EVENTS=$(edmFileUtil -j $(echo file:$(ls *.root)) | $INITIAL_DIR/jq-linux64 '.[0].events')
+which jq
+if [ -f $INITIAL_DIR/jq-linux64 ]; then
+  shopt -s expand_aliases
+  alias jq="$INITIAL_DIR/jq-linux64"
+fi
+ROOTFILE_EVENTS=$(edmFileUtil -j $(echo file:$(ls *.root)) | jq '.[0].events')
 echo 'Got:'
 echo ${ROOTFILE_EVENTS}
 echo ''
