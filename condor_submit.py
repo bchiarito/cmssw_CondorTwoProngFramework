@@ -32,6 +32,7 @@ jobinfo_filename = 'job_info.py'
 dataset_cache = 'datasets'
 fix_condor_hexcms_script = 'hexcms_fix_python.sh'
 hexcms_proxy_script = 'hexcms_proxy_setup.sh'
+lxplus_proxy_script = 'lxplus_proxy_setup.sh'
 hexcms_proxy_script_timeleft = 'hexcms_proxy_timeleft.sh'
 cmssw_prebuild_area = 'prebuild'
 cmssw_prebuild_area_v1 = 'prebuild_v1'
@@ -62,7 +63,7 @@ try:
   import classad
   import htcondor
 except ImportError as err:
-  if site == 'hexcms':
+  if site == 'hexcms' or site == 'lxplus':
     raise err
   if site == 'cmslpc':
     print('ERROR: Could not import classad or htcondor. Verify that python is default and not from cmssw release (do not cmsenv).')
@@ -80,6 +81,8 @@ input_options = io_args.add_mutually_exclusive_group()
 input_options.add_argument("--input_local", action="store_true",
 help=argparse.SUPPRESS)
 input_options.add_argument("--input_cmslpc", action="store_true",
+help=argparse.SUPPRESS)
+input_options.add_argument("--input_lxplus", action="store_true",
 help=argparse.SUPPRESS)
 input_options.add_argument("--input_dataset", action="store_true",
 help=argparse.SUPPRESS)
@@ -213,7 +216,8 @@ else: percentmax = False
 # determine schedd limit
 if args.scheddLimit == -1:
   if site == 'hexcms': args.scheddLimit = 350
-  if site == 'cmslpc': args.scheddLimit = 1000
+  if site == 'cmslpc': args.scheddLimit = 1500
+  if site == 'lxplus': args.scheddLimit = 1000
 
 # prebuild cmssw area
 import platform
@@ -221,14 +225,14 @@ current_os = "alma8"
 if "alma" in platform.platform(): current_os = "alma8"
 elif "el9" in platform.platform(): current_os = "alma8"
 elif 'centos' in platform.platform(): current_os = "sl7"
-print("Setting up src directory to ship with job")
+print("Setting up src directory to ship with job...")
 if args.rebuild:
     os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver + ' ' + site)
 if args.ver == 'v2' and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 if args.ver == 'v1' and not os.path.isdir(cmssw_prebuild_area_v1):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
-print("\nFinished setting up directory to ship with job.\n")
+print("Finished setting up directory to ship with job.\n")
 
 # check input
 if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
@@ -236,6 +240,7 @@ if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
 if args.input_local == False and args.input_cmslpc == False and args.input_dataset == False:
     if site == "hexcms": args.input_local = True
     if site == "cmslpc": args.input_cmslpc = True
+    if site == "lxplus": args.input_lxplus = True
 if args.input_local and site == "cmslpc": raise SystemExit("Configuration Error: cannot use --input_local on cmslpc.")
 if not re.match("(?:" + "/store/.*" + r")\Z", args.input): args.input_cmslpc = False
 input_files = [] # each entry a file location
@@ -281,6 +286,27 @@ elif args.input_cmslpc:
       input_files.append(line)
       if len(input_files) == maxfiles: break
 
+# input is eos area on cmslc
+elif args.input_lxplus:
+  # TODO
+  print('pass')
+  '''
+  if s[len(s)-5:len(s)] == ".root":
+    input_files.append(args.input)
+  else:
+    list_of_files = subprocess.getoutput("xrdfs root://cmseos.fnal.gov ls " + args.input)
+    list_of_files = list_of_files.split('\n')
+    totalfiles = len(list_of_files) 
+    if percentmax: maxfiles = int(args.files * totalfiles)
+    for line in list_of_files:
+      if "[ERROR]" in line: break
+      while not line[len(line)-5:len(line)]=='.root':
+        sub = subprocess.getoutput("xrdfs root://cmseos.fnal.gov ls " + line)
+        line = sub
+      input_files.append(line)
+      if len(input_files) == maxfiles: break
+  '''
+
 # input is dataset name
 elif args.input_dataset:
   dataset_name = args.input
@@ -322,6 +348,7 @@ elif args.output_local == False and args.output_cmslpc == False and args.output_
   output_not_set = True
 if output_not_set and site == "hexcms": args.output_local = True
 if output_not_set and site == "cmslpc": args.output_cmslpc = True
+if output_not_set and site == "lxplus": args.output_lxplus = True
 if args.output_cmslpc: out_redirector = "root://cmseos.fnal.gov/"
 if args.output_hexcms: out_redirector = "root://ruhex-osgce.rutgers.edu/"
 
@@ -340,6 +367,10 @@ if (site == 'hexcms' and args.input_dataset) or (site == 'hexcms' and args.input
   if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 if site == 'cmslpc':
   time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
+if site == 'lxplus':
+  subprocess.check_output("./"+helper_dir+"/"+lxplus_proxy_script, shell=True)
+  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info --file x509up -timeleft", shell=True))))
   if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
 # get git hash/tag
@@ -480,14 +511,18 @@ for i in range(len(infile_tranches)):
   else: job_dir = 'Job_' + args.dir + suffix
   sub = htcondor.Submit()
   sub['executable'] = helper_dir+'/'+executable if not args.noPayload else helper_dir+'/'+executable_fast
+  if site == 'lxplus':
+    sub['Proxy_filename'] = 'x509up'
   sub['arguments'] = unpacker_filename+" "+stageout_filename+" $(GLOBAL_PROC) "+datamc+" "+args.year
   if args.lumiMask is None:
     sub['arguments'] += " None"
   else:
     sub['arguments'] += " "+os.path.basename(args.lumiMask)
   sub['arguments'] += " "+constructor+" "+phoconstructor+" "+selection+" "+extrasettings+" "+args.ver
+  if site == 'lxplus': sub['arguments'] += " $(Proxy_filename)"
   sub['should_transfer_files'] = 'YES'
-  sub['+JobFlavor'] = 'longlunch'
+  #sub['+JobFlavor'] = '"nextweek"'
+  if site == 'lxplus': sub['+MaxRuntime'] = '864000' # 10 days
   sub['Notification'] = 'Never'
   if site == 'cmslpc': sub['use_x509userproxy'] = 'true'
   if site == 'hexcms' and args.input_dataset: sub['x509userproxy'] = os.path.basename(proxy_path)
@@ -510,10 +545,11 @@ for i in range(len(infile_tranches)):
     cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/PhysicsTools' + ", " + \
     cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/CommonTools'
 
-  if site == 'cmslpc': sub['transfer_input_files'] += ", helper/jq-linux64"
+  if site == 'lxplus': sub['transfer_input_files'] += ", helper/jq-linux64"
 
   if not args.lumiMask is None:
     sub['transfer_input_files'] += ", "+args.lumiMask
+  if site == 'lxplus': sub['transfer_input_files'] += ', x509up'
   sub['transfer_output_files'] = '""'
   sub['initialdir'] = ''
   sub['JobBatchName'] = args.dir if args.batch is None else args.batch
@@ -526,6 +562,7 @@ for i in range(len(infile_tranches)):
   if not args.scheddLimit==-1: sub['max_materialize'] = str(args.scheddLimit)
   if site == 'hexcms': sub['+SingularityImage'] = '"/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el7:x86_64"'
   if site == 'cmslpc': sub['+DesiredOS'] = '"SL7"'
+  if site == 'lxplus': sub['+WantOS'] = '"el7"'
   subs.append(sub)
 
 # make job directory
@@ -577,6 +614,10 @@ if site == 'cmslpc':
   projection=["Name", "MyAddress"]
   )
   schedd_ad = coll_query[0]
+if site == 'lxplus':
+  coll = htcondor.Collector()
+  schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
+  schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
 schedd = htcondor.Schedd(schedd_ad)
 
 # print summary
