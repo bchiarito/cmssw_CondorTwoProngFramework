@@ -225,14 +225,14 @@ current_os = "alma8"
 if "alma" in platform.platform(): current_os = "alma8"
 elif "el9" in platform.platform(): current_os = "alma8"
 elif 'centos' in platform.platform(): current_os = "sl7"
-print("Setting up src directory to ship with job")
+print("Setting up src directory to ship with job...")
 if args.rebuild:
     os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver + ' ' + site)
 if args.ver == 'v2' and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 if args.ver == 'v1' and not os.path.isdir(cmssw_prebuild_area_v1):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
-print("\nFinished setting up directory to ship with job.\n")
+print("Finished setting up directory to ship with job.\n")
 
 # check input
 if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
@@ -522,7 +522,7 @@ for i in range(len(infile_tranches)):
   if site == 'lxplus': sub['arguments'] += " $(Proxy_filename)"
   sub['should_transfer_files'] = 'YES'
   #sub['+JobFlavor'] = '"nextweek"'
-  sub['+MaxRuntime'] = '36000'
+  if site == 'lxplus': sub['+MaxRuntime'] = '864000' # 10 days
   sub['Notification'] = 'Never'
   if site == 'cmslpc': sub['use_x509userproxy'] = 'true'
   if site == 'hexcms' and args.input_dataset: sub['x509userproxy'] = os.path.basename(proxy_path)
