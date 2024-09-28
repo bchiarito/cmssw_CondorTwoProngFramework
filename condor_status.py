@@ -23,7 +23,7 @@ try:
   import classad
   import htcondor
 except ImportError as err:
-  if site == 'hexcms':
+  if site == 'hexcms' or site == 'lxplus':
     raise err
   if site == 'cmslpc':
     print('ERROR: Could not import classad or htcondor. Verify that python is default and not from cmssw release (do not cmsenv).')
@@ -34,6 +34,7 @@ parser.add_argument("jobDir",help="the condor_submit.py job directory")
 parser.add_argument("-v", "--verbose", default=False, action="store_true",help="turn on debug messages")
 parser.add_argument("-s", "--summary", default=False, action="store_true",help="do not print one line per job, instead summarize number of jobs with each status type")
 parser.add_argument("-t", "--totalOutputSize", default=False, action="store_true",help="print total output size")
+parser.add_argument("-o", "--check_output", default=False, action="store_true",help="check each subjob output size")
 parser.add_argument("--onlyFinished", default=False, action="store_true",help="ignore 'running' and 'submitted' job Ids")
 parser.add_argument("--notFinished", default=False, action="store_true",help="ignore 'finished' job Ids")
 parser.add_argument("--onlyError", default=False, action="store_true",help="ignore 'running', 'submitted', and 'finished, job Ids")
@@ -76,6 +77,10 @@ if site == 'cmslpc':
   projection=["Name", "MyAddress"]
   )
   schedd_ad = coll_query[0]
+if site == 'lxplus':
+  coll = htcondor.Collector()
+  schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
+  schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
 schedd = htcondor.Schedd(schedd_ad)
 if args.verbose: print("DEBUG:", schedd_ad["Name"])
 
@@ -88,40 +93,43 @@ if args.verbose:
   print("Empty dictionary:", subjobs)
 
 # discover output files
-if args.verbose: print("DEBUG: Discover output files")
-if output_eos:
-  if args.verbose: print("DEBUG: command", 'eos root://cmseos.fnal.gov ls -lh '+output_area)
-  output = subprocess.check_output('eos root://cmseos.fnal.gov ls -lh '+output_area, shell=True)
-elif not output_hex: # local
-  if args.verbose: print("DEBUG: command", 'ls -lh '+output_area)
-  output = subprocess.check_output('ls -lh '+output_area, shell=True) 
-if output_eos or not output_hex:
-  for line in output.decode('utf-8').split('\n'):
-    if args.verbose:
-      print(len(line.split()))
-      for item in line.split():
-        print("  ", item)
-    if len(line.split()) <= 2: continue
-    try:
-      l = line.split()
-      fi = l[len(l)-1]
-      if not fi.endswith('.root'): continue
-      if output_eos: size = l[4]+' '+l[5]
-      else:
-        temp = l[4]
-        size = temp[0:len(temp)-1]+' '+temp[len(temp)-1]
-      u = fi.rfind('_')
-      d = fi.rfind('.')
-      proc = int(fi[u+1:d]) # from outputfile
-      proc = proc - first_proc # accounting for tranches
-      if proc >= int(job.queue): continue
-      if proc < 0: continue
-      subjobs[proc]['size'] = size
-    except (IndexError, ValueError):
-      print("WARNING: got IndexError or ValueError, may want to check output area directly with (eos) ls.")
-      continue
-if output_hex:
-  print("NOTE: Output is to hexcms, script cannot check output directory,\n  will still report job status")
+if args.check_output:
+    if args.verbose: print("DEBUG: Discover output files")
+    if output_eos:
+      if args.verbose: print("DEBUG: command", 'eos root://cmseos.fnal.gov ls -lh '+output_area)
+      output = subprocess.check_output('eos root://cmseos.fnal.gov ls -lh '+output_area, shell=True)
+    elif not output_hex: # local
+      if args.verbose: print("DEBUG: command", 'ls -lh '+output_area)
+      output = subprocess.check_output('ls -lh '+output_area, shell=True) 
+    if output_eos or not output_hex:
+      for line in output.decode('utf-8').split('\n'):
+        if args.verbose:
+          print(len(line.split()))
+          for item in line.split():
+            print("  ", item)
+        if len(line.split()) <= 2: continue
+        try:
+          l = line.split()
+          fi = l[len(l)-1]
+          if not fi.endswith('.root'): continue
+          if output_eos: size = l[4]+' '+l[5]
+          else:
+            temp = l[4]
+            size = temp[0:len(temp)-1]+' '+temp[len(temp)-1]
+          u = fi.rfind('_')
+          d = fi.rfind('.')
+          proc = int(fi[u+1:d]) # from outputfile
+          proc = proc - first_proc # accounting for tranches
+          if proc >= int(job.queue): continue
+          if proc < 0: continue
+          subjobs[proc]['size'] = size
+        except (IndexError, ValueError):
+          print("WARNING: got IndexError or ValueError, may want to check output area directly with (eos) ls.")
+          continue
+    if output_hex:
+      print("NOTE: Output is to hexcms, script cannot check output directory,\n  will still report job status")
+else:
+    pass
 
 # parse json job report
 if args.verbose: print("DEBUG: parse job report file, creating with condor_wait ...")
@@ -292,7 +300,7 @@ for jobNum in subjobs:
   else:
     totalTime = ''
   size = subjob.get('size', "")
-  if status=='finished' and size=='' and not output_hex:
+  if status=='finished' and size=='' and not output_hex and args.check_output:
     status = 'fin w/o output'
     noOutput_jobs.append(jobNum)
   if status=='finished': finished_jobs.append(jobNum)
