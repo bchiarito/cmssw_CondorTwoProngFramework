@@ -374,7 +374,7 @@ if args.output_local:
     if not ret == 0: raise SystemExit('ERROR: Failed to create job output directory!')
     ret = os.system('mkdir -p ' + output_path+'/reports/')
     if not ret == 0: raise SystemExit('ERROR: Failed to create job reports directory!')
-if args.output_cmslpc:
+if args.output_cmslpc and not site == 'hexcms':
   ret = os.system("eos root://cmseos.fnal.gov mkdir -p " + output_path)
   if not ret == 0: raise SystemExit('ERROR: Failed to create job output directory in cmslpc eos area!')
 
@@ -388,7 +388,8 @@ if args.output_cmslpc:
   os.system('touch blank.txt')
   ret = os.system('xrdcp --nopbar blank.txt '+ out_redirector + output_path)
   if not ret == 0: raise SystemExit('ERROR: Failed to xrdcp test file into output eos area!')
-  ret = os.system("eos " + out_redirector + " rm " + output_path + "/blank.txt &> /dev/null")
+  if site == 'hexcms': ret = 0
+  else: ret = os.system("eos " + out_redirector + " rm " + output_path + "/blank.txt &> /dev/null")
   if not ret == 0: raise SystemExit('ERROR: Failed eosrm test file from output eos area!')
   os.system('rm blank.txt')
 
