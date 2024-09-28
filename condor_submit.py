@@ -545,7 +545,7 @@ for i in range(len(infile_tranches)):
     cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/PhysicsTools' + ", " + \
     cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/CommonTools'
 
-  if site == 'lxplus': sub['transfer_input_files'] += ", helper/jq-linux64"
+  if site == 'lxplus' or site == 'cmslpc': sub['transfer_input_files'] += ", helper/jq-linux64"
 
   if not args.lumiMask is None:
     sub['transfer_input_files'] += ", "+args.lumiMask
