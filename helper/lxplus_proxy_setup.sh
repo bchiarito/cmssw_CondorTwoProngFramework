@@ -5,4 +5,6 @@ path=$(voms-proxy-info --path)
 if [[ -f "$path" ]]; then
   cp $path ./x509up
   exit 0
+else
+  exit 1
 fi

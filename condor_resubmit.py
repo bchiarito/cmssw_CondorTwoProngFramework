@@ -100,6 +100,10 @@ if site == 'cmslpc':
   projection=["Name", "MyAddress"]
   )
   schedd_ad = coll_query[0]
+if site == 'lxplus':
+  coll = htcondor.Collector()
+  schedd_query = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "MyAddress"])
+  schedd_ad = coll.locate(htcondor.DaemonTypes.Schedd)
 schedd = htcondor.Schedd(schedd_ad)
 
 # make list of procs to resubmit
@@ -140,7 +144,10 @@ for proc in procs:
     pass
 
 # remove held jobs, if any
-print(subprocess.check_output("condor_rm -constraint JobStatus==5 -name {} {}".format(schedd, cluster), shell=True))
+try:
+    print(subprocess.check_output("condor_rm -constraint JobStatus==5 -name {} {}".format(schedd_ad["Name"], cluster), shell=True))
+except Exception:
+    pass
 
 # submit the job
 if args.verbose: print("DEBUG: Submitting Jobs")
