@@ -369,7 +369,10 @@ if site == 'cmslpc':
   time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
   if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 if site == 'lxplus':
-  subprocess.check_output("./"+helper_dir+"/"+lxplus_proxy_script, shell=True)
+  try:
+    subprocess.check_output("./"+helper_dir+"/"+lxplus_proxy_script, shell=True)
+  except:
+    raise SystemExit("PROXY ERROR: Please get a grid proxy with voms-proxy-init -voms cms!")
   time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info --file x509up -timeleft", shell=True))))
   if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
@@ -474,7 +477,7 @@ new_unpacker_filename = unpacker_filename
 to_replace = {}
 to_replace['__inputfilefilenamebase__'] = input_file_filename_base
 to_replace['__ext__'] = ext
-if args.input_local and site == 'hexcms':
+if args.input_local:
   to_replace['__redirector__'] = ''
   to_replace['__copycommand__'] = 'cp'
 if args.input_cmslpc:
@@ -522,7 +525,7 @@ for i in range(len(infile_tranches)):
   if site == 'lxplus': sub['arguments'] += " $(Proxy_filename)"
   sub['should_transfer_files'] = 'YES'
   #sub['+JobFlavor'] = '"nextweek"'
-  if site == 'lxplus': sub['+MaxRuntime'] = '864000' # 10 days
+  if site == 'lxplus': sub['+MaxRuntime'] = '345600' # 4 days
   sub['Notification'] = 'Never'
   if site == 'cmslpc': sub['use_x509userproxy'] = 'true'
   if site == 'hexcms' and args.input_dataset: sub['x509userproxy'] = os.path.basename(proxy_path)

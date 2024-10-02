@@ -49,6 +49,8 @@ args = parser.parse_args()
 # constants
 json_filename = 'temp.json'
 
+if args.noOutput: args.check_output = True
+
 # import job
 if args.verbose: print("DEBUG: Import job")
 sys.path.append(args.jobDir)
