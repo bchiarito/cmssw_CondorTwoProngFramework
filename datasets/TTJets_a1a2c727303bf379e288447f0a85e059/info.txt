@@ -1,0 +1,6 @@
+Dataset: /TTJets_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL17MiniAODv2-106X_mc2017_realistic_v9-v2/MINIAODSIM
+Size: 14.9 TB
+Files: 2,964
+Events: 249,133,364
+84,053 events/file
+5.0 GB/file

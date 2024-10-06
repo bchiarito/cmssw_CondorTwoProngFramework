@@ -1,0 +1,6 @@
+Dataset: /EGamma/Run2018A-UL2018_MiniAODv2_GT36-v1/MINIAOD
+Size: 14.3 TB
+Files: 5,175
+Events: 339,013,231
+65,509 events/file
+2.8 GB/file
