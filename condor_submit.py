@@ -95,6 +95,8 @@ output_options.add_argument("--output_cmslpc", action="store_true",
 help=argparse.SUPPRESS)
 output_options.add_argument("--output_hexcms", action="store_true",
 help=argparse.SUPPRESS)
+output_options.add_argument("--output_lxplus", action="store_true",
+help=argparse.SUPPRESS)
 
 # execution specification
 exec_args = parser.add_argument_group('execution options')
@@ -628,6 +630,7 @@ schedd = htcondor.Schedd(schedd_ad)
 if args.output_local: o_assume = 'local'
 if args.output_cmslpc: o_assume = 'cmslpc eos'
 if args.output_hexcms: o_assume = 'hexcms eos'
+if args.output_lxplus: o_assume = 'lxplus eos'
 if args.input_local: i_assume = 'local'
 if args.input_cmslpc: i_assume = 'cmslpc eos'
 if args.input_dataset: i_assume = 'official dataset'
