@@ -44,12 +44,12 @@ parser.add_argument("--held", default=False, action="store_true",help="only job 
 parser.add_argument("--aborted", "-a", default = False, action="store_true", help="print a string of 'aborted' job IDs for condor_resubmit.py")
 parser.add_argument("--noOutput", default = False, action="store_true", help="print a string of 'fin w/o output' job IDs for condor_resubmit.py")
 parser.add_argument("--finished", "-f", default = False, action="store_true", help="print a string of 'finished' job IDs for condor_resubmit.py")
+parser.add_argument("--dump", help="dump json log of this proc")
 args = parser.parse_args()
 
 # constants
 json_filename = 'temp.json'
-
-if args.noOutput: args.check_output = True
+table_row_string = ' {:<5}| {:<18}| {:<7}| {:<18}| {:<12}| {:<70.70}'
 
 # import job
 if args.verbose: print("DEBUG: Import job")
@@ -65,6 +65,10 @@ output_hex = False
 if output_area[0:7] == '/store/':
   if "eos_area" in output_area: output_hex = True
   else: output_eos = True
+
+# config
+if args.noOutput: args.check_output = True
+if output_hex and site != 'hexcms': args.check_output = False
 
 # get the schedd
 if args.verbose: print("DEBUG: Get Schedd")
@@ -128,10 +132,6 @@ if args.check_output:
         except (IndexError, ValueError):
           print("WARNING: got IndexError or ValueError, may want to check output area directly with (eos) ls.")
           continue
-    if output_hex:
-      print("NOTE: Output is to hexcms, script cannot check output directory,\n  will still report job status")
-else:
-    pass
 
 # parse json job report
 if args.verbose: print("DEBUG: parse job report file, creating with condor_wait ...")
@@ -148,6 +148,9 @@ for i, match in enumerate(matches):
   date = time.strptime(str(block['EventTime']), '%Y-%m-%dT%H:%M:%S')
   if i == 0: first_date = time.strptime(str(block['EventTime']), '%Y-%m-%dT%H:%M:%S')
   t = timegm(date)
+
+  if args.dump and 'Proc' in block and int(block['Proc']) == int(args.dump): print(json.dumps(block, indent=4))
+
   if block['MyType'] == 'SubmitEvent':
     subjobs[int(block['Proc'])]['resubmitted'] = 0
     subjobs[int(block['Proc'])]['start_time'] = date
@@ -161,14 +164,20 @@ for i, match in enumerate(matches):
     subjobs[int(block['Proc'])]['end_time'] = date
     if block['TerminatedNormally']:
       if block['ReturnValue'] == 20:
-        subjobs[int(block['Proc'])]['status'] = 'finNoLumis'
-      else:
+        subjobs[int(block['Proc'])]['status'] = 'fin no lumis'
+      elif block['ReturnValue'] == 1:
+        subjobs[int(block['Proc'])]['status'] = 'fin stageout err'
+      elif block['ReturnValue'] == 2:
+        subjobs[int(block['Proc'])]['status'] = 'fin no output'
+      elif block['ReturnValue'] == 0:
         subjobs[int(block['Proc'])]['status'] = 'finished'
+      else:
+        subjobs[int(block['Proc'])]['status'] = 'finished other'
     else:
       subjobs[int(block['Proc'])]['status'] = 'failed'
   if block['MyType'] == 'ShadowExceptionEvent':
     subjobs[int(block['Proc'])]['end_time'] = date
-    subjobs[int(block['Proc'])]['status'] = 'exception!'
+    subjobs[int(block['Proc'])]['status'] = 'exception'
     subjobs[int(block['Proc'])]['reason'] = block['Message']
   if block['MyType'] == 'FileTransferEvent' and block['Type'] == 6:
     subjobs[int(block['Proc'])]['end_time'] = date
@@ -258,6 +267,8 @@ for resubmit_cluster,procs in job.resubmits:
 
 total_time = str(datetime.timedelta(seconds = timegm(date) - timegm(first_date)))
 
+if args.dump: exit()
+
 # Print Status
 print("Results for ClusterId", cluster, "at schedd", schedd_name, "total time", total_time)
 for count, resubmit_cluster in enumerate(job.resubmits):
@@ -275,7 +286,8 @@ if args.totalOutputSize:
     suffix = output.split()[0].strip()[-1]
     print("Total output size ", size, suffix)
 
-if not args.summary and not args.aborted and not args.noOutput and not args.finished: print(' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {}'.format(
+
+if not args.summary and not args.aborted and not args.noOutput and not args.finished: print(table_row_string.format(
        'Proc', 'Status', 'Resubs', 'Wall Time', 'Output File', 'Msg'
 ))
 if args.summary: summary = {}
@@ -313,7 +325,7 @@ for jobNum in subjobs:
   resubs = subjob.get('resubmitted', '')
   if resubs == 0: resubs = ''
   if args.onlyResubmits and resubs == '': continue  
-  lines.append(' {:<5}| {:<15}| {:<7}| {:<18}| {:<12}| {:<70.70}'.format(
+  lines.append(table_row_string.format(
          str(jobNum), str(status), str(resubs), str(totalTime), str(size), str(reason)
   ))
   if args.summary:
@@ -332,9 +344,9 @@ if args.summary:
   total = 0
   for key in summary:
     total += summary[key]
-  print('{:<15} | {}'.format('Status', 'Job Ids ({} total)'.format(total)))
+  print('{:<18} | {}'.format('Status', 'Job Ids ({} total)'.format(total)))
   for status in summary:
-    print('{:<15} | {}'.format(str(status), str(summary[status])))
+    print('{:<18} | {}'.format(str(status), str(summary[status])))
 
 if args.aborted and len(aborted_jobs) != 0: 
   sys.stdout.write(str(aborted_jobs[0])) 
