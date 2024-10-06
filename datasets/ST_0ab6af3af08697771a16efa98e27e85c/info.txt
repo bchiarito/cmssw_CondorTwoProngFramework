@@ -1,0 +1,6 @@
+Dataset: /ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM
+Size: 0.4 TB
+Files: 140
+Events: 7,749,000
+55,350 events/file
+2.9 GB/file
