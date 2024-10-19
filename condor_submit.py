@@ -151,6 +151,8 @@ run_args.add_argument("--redirector", metavar='CHOICE', choices=['global', 'usa'
 help="change redirector when running on a dataset")
 run_args.add_argument("--centos_condor", default=False, action="store_true",
 help="submit to old cent os condor nodes")
+run_args.add_argument("--tarball", default=False, action="store_true",
+help="use tarball in prebuild instead of untarred directories")
 
 # convenience
 other_args = parser.add_argument_group('misc options')
@@ -229,7 +231,7 @@ elif "el9" in platform.platform(): current_os = "alma8"
 elif 'centos' in platform.platform(): current_os = "sl7"
 print("Setting up src directory to ship with job...")
 if args.rebuild:
-    os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver + ' ' + site)
+    os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver + ' ' + site + ' ' + str(args.tarball))
 if args.ver == 'v2' and not os.path.isdir(cmssw_prebuild_area):
   raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 if args.ver == 'v1' and not os.path.isdir(cmssw_prebuild_area_v1):
@@ -380,13 +382,25 @@ if site == 'lxplus':
 
 # get git hash/tag
 tag_info_frontend = subprocess.getoutput("git describe --tags --long")
-if args.ver == 'v2': tag_info_backend = subprocess.getoutput("cd {}/*/src/; git describe --tags --long".format(cmssw_prebuild_area))
-if args.ver == 'v1': tag_info_backend = subprocess.getoutput("cd {}/*/src/; git describe --tags --long".format(cmssw_prebuild_area_v1))
 tag_info_frontend = tag_info_frontend.split('-')
-tag_info_backend = tag_info_backend.split('-')
 f_tag = tag_info_frontend[0]
 f_commits = tag_info_frontend[1]
 f_hash = tag_info_frontend[2]
+if args.tarball:
+    tarball_path = None
+    if args.ver == 'v2':
+        for item in os.listdir(cmssw_prebuild_area):
+            if '.tgz' in item:
+                tarball_path = cmssw_prebuild_area+'/'+item
+                break
+        if not tarball_path: raise SystemExit("ERROR")
+        else:
+            pos = tarball_path.rfind('__')
+            tag_info_backend = tarball_path[pos+2:-4].split('-')
+else: 
+    if args.ver == 'v2': tag_info_backend = subprocess.getoutput("cd {}/*/src/; git describe --tags --long".format(cmssw_prebuild_area))
+    if args.ver == 'v1': tag_info_backend = subprocess.getoutput("cd {}/*/src/; git describe --tags --long".format(cmssw_prebuild_area_v1))
+    tag_info_backend = tag_info_backend.split('-')
 b_tag = tag_info_backend[0]
 b_commits = tag_info_backend[1]
 b_hash = tag_info_backend[2]
@@ -510,6 +524,8 @@ use_template_to_replace(template_filename, new_stageout_filename, to_replace)
 
 # define submit file
 subs = []
+ver_param = args.ver
+if args.tarball: ver_param = 't'+ver_param
 for i in range(len(infile_tranches)):
   if len(infile_tranches)==1: suffix = ''
   else: suffix = '_tranche'+str(i+1)
@@ -524,7 +540,7 @@ for i in range(len(infile_tranches)):
     sub['arguments'] += " None"
   else:
     sub['arguments'] += " "+os.path.basename(args.lumiMask)
-  sub['arguments'] += " "+constructor+" "+phoconstructor+" "+selection+" "+extrasettings+" "+args.ver
+  sub['arguments'] += " "+constructor+" "+phoconstructor+" "+selection+" "+extrasettings+" "+ver_param
   if site == 'lxplus': sub['arguments'] += " $(Proxy_filename)"
   sub['should_transfer_files'] = 'YES'
   #sub['+JobFlavor'] = '"nextweek"'
@@ -534,27 +550,24 @@ for i in range(len(infile_tranches)):
   if site == 'hexcms' and args.input_dataset: sub['x509userproxy'] = os.path.basename(proxy_path)
   if site == 'hexcms' and args.input_cmslpc: sub['x509userproxy'] = os.path.basename(proxy_path)
 
-  if args.ver == 'v2':
-    sub['transfer_input_files'] = \
-    job_dir+'/'+unpacker_filename + ", " + \
-    job_dir+'/'+stageout_filename + ", " + \
-    job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC)'+ext + ", " + \
-    cmssw_prebuild_area+'/CMSSW_10_6_27/src/PhysicsTools' + ", " + \
-    cmssw_prebuild_area+'/CMSSW_10_6_27/src/EgammaAnalysis' + ", " + \
-    cmssw_prebuild_area+'/CMSSW_10_6_27/src/EgammaPostRecoTools' + ", " + \
-    cmssw_prebuild_area+'/CMSSW_10_6_27/src/RecoEgamma'
-  if args.ver == 'v1':
-    sub['transfer_input_files'] = \
-    job_dir+'/'+unpacker_filename + ", " + \
-    job_dir+'/'+stageout_filename + ", " + \
-    job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC)'+ext + ", " + \
-    cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/PhysicsTools' + ", " + \
-    cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/CommonTools'
-
+  sub['transfer_input_files'] = \
+  job_dir+'/'+unpacker_filename + ", " + \
+  job_dir+'/'+stageout_filename + ", " + \
+  job_dir+'/infiles/'+input_file_filename_base+'_$(GLOBAL_PROC)'+ext + ", "
+  if args.tarball: sub['transfer_input_files'] += ", "+tarball_path
+  else:
+      if args.ver == 'v2':
+        sub['transfer_input_files'] += \
+        cmssw_prebuild_area+'/CMSSW_10_6_27/src/PhysicsTools' + ", " + \
+        cmssw_prebuild_area+'/CMSSW_10_6_27/src/EgammaAnalysis' + ", " + \
+        cmssw_prebuild_area+'/CMSSW_10_6_27/src/EgammaPostRecoTools' + ", " + \
+        cmssw_prebuild_area+'/CMSSW_10_6_27/src/RecoEgamma'
+      if args.ver == 'v1':
+        sub['transfer_input_files'] += \
+        cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/PhysicsTools' + ", " + \
+        cmssw_prebuild_area_v1+'/CMSSW_10_6_19_patch2/src/CommonTools'
   if site == 'lxplus' or site == 'cmslpc': sub['transfer_input_files'] += ", helper/jq-linux64"
-
-  if not args.lumiMask is None:
-    sub['transfer_input_files'] += ", "+args.lumiMask
+  if not args.lumiMask is None: sub['transfer_input_files'] += ", "+args.lumiMask
   if site == 'lxplus': sub['transfer_input_files'] += ', x509up'
   sub['transfer_output_files'] = '""'
   sub['initialdir'] = ''

@@ -39,6 +39,15 @@ export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
 source $VO_CMS_SW_DIR/cmsset_default.sh
 echo '&&& now cmsrel &&&'
 
+if [[ ${11} == "tv2" ]]; then
+  export SCRAM_ARCH=slc7_amd64_gcc820
+  tar -xf *.tgz
+  cd CMSSW_10_6_27/src
+  echo '&&& ReBuilding (scram b ProjectRename) &&&'
+  scramv1 b ProjectRename
+  eval `scramv1 runtime -sh`
+fi
+
 if [[ ${11} == "v2" ]]; then
   export SCRAM_ARCH=slc7_amd64_gcc820
   scramv1 project CMSSW CMSSW_10_6_27
@@ -48,6 +57,8 @@ if [[ ${11} == "v2" ]]; then
   mv $INITIAL_DIR/EgammaAnalysis $CMSSW_BASE/src/
   mv $INITIAL_DIR/EgammaPostRecoTools $CMSSW_BASE/src/
   mv $INITIAL_DIR/RecoEgamma $CMSSW_BASE/src/
+  echo '&&& Building (scram b) &&&'
+  scramv1 b
 fi
 
 if [[ ${11} == "v1" ]]; then
@@ -57,11 +68,10 @@ if [[ ${11} == "v1" ]]; then
   eval `scramv1 runtime -sh`
   mv $INITIAL_DIR/PhysicsTools $CMSSW_BASE/src/
   mv $INITIAL_DIR/CommonTools $CMSSW_BASE/src/
+  echo '&&& Building (scram b) &&&'
+  scramv1 b
 fi
 
-echo ''
-echo '&&& Building (scram b) &&&'
-scramv1 b
 echo ''
 echo '&&& Setup finished &&&'
 echo ''
