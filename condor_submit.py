@@ -125,6 +125,8 @@ exec_args.add_argument("--ver", default="v2", choices=['v1', 'v2'], metavar='vX'
 help="miniaod version of input")
 exec_args.add_argument("--noPayload", default=False, action="store_true",
 help="for testing purposes")
+exec_args.add_argument("--backend_branch", default='master',
+help="clone a different branch for the backend")
 
 # run specification
 run_args = parser.add_argument_group('run options')
@@ -223,21 +225,6 @@ if args.scheddLimit == -1:
   if site == 'cmslpc': args.scheddLimit = 1500
   if site == 'lxplus': args.scheddLimit = 1000
 
-# prebuild cmssw area
-import platform
-current_os = "alma8"
-if "alma" in platform.platform(): current_os = "alma8"
-elif "el9" in platform.platform(): current_os = "alma8"
-elif 'centos' in platform.platform(): current_os = "sl7"
-print("Setting up src directory to ship with job...")
-if args.rebuild:
-    os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver + ' ' + site + ' ' + str(args.tarball))
-if args.ver == 'v2' and not os.path.isdir(cmssw_prebuild_area):
-  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
-if args.ver == 'v1' and not os.path.isdir(cmssw_prebuild_area_v1):
-  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
-print("Finished setting up directory to ship with job.\n")
-
 # check input
 if re.match("(?:" + "/.*/.*/MINIAOD" + r")\Z", args.input) or \
    re.match("(?:" + "/.*/.*/MINIAODSIM" + r")\Z", args.input): args.input_dataset = True
@@ -329,6 +316,30 @@ if args.verbose:
   for input_file in input_files:
     print('  '+input_file.strip())
 
+# check proxy
+if (site == 'hexcms' and args.input_dataset) or (site == 'hexcms' and args.input_cmslpc):
+  if args.proxy == '':
+    subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)
+    proxy_path = ((subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)).strip()).decode('utf-8')
+  else:
+    proxy_path = args.proxy
+  if not os.path.isfile(proxy_path):
+    raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-init -voms cms")
+  os.system('cp '+proxy_path+' .')
+  proxy_filename = os.path.basename(proxy_path)
+  time_left = str(timedelta(seconds=int(subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script_timeleft, shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
+if site == 'cmslpc':
+  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
+if site == 'lxplus':
+  try:
+    subprocess.check_output("./"+helper_dir+"/"+lxplus_proxy_script, shell=True)
+  except:
+    raise SystemExit("PROXY ERROR: Please get a grid proxy with voms-proxy-init -voms cms!")
+  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info --file x509up -timeleft", shell=True))))
+  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
+
 # test input
 if args.input_cmslpc:
   ret = os.system('xrdfs root://cmseos.fnal.gov/ ls ' + input_files[0] + ' > /dev/null')
@@ -355,30 +366,6 @@ if output_not_set and site == "cmslpc": args.output_cmslpc = True
 if output_not_set and site == "lxplus": args.output_lxplus = True
 if args.output_cmslpc: out_redirector = "root://cmseos.fnal.gov/"
 if args.output_hexcms: out_redirector = "root://ruhex-osgce.rutgers.edu/"
-
-# check proxy
-if (site == 'hexcms' and args.input_dataset) or (site == 'hexcms' and args.input_cmslpc):
-  if args.proxy == '':
-    subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)
-    proxy_path = ((subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script, shell=True)).strip()).decode('utf-8')
-  else:
-    proxy_path = args.proxy
-  if not os.path.isfile(proxy_path):
-    raise SystemExit("ERROR: No grid proxy provided! Please use command voms-proxy-init -voms cms")
-  os.system('cp '+proxy_path+' .')
-  proxy_filename = os.path.basename(proxy_path)
-  time_left = str(timedelta(seconds=int(subprocess.check_output("./"+helper_dir+"/"+hexcms_proxy_script_timeleft, shell=True))))
-  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
-if site == 'cmslpc':
-  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info -timeleft", shell=True))))
-  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
-if site == 'lxplus':
-  try:
-    subprocess.check_output("./"+helper_dir+"/"+lxplus_proxy_script, shell=True)
-  except:
-    raise SystemExit("PROXY ERROR: Please get a grid proxy with voms-proxy-init -voms cms!")
-  time_left = str(timedelta(seconds=int(subprocess.check_output("voms-proxy-info --file x509up -timeleft", shell=True))))
-  if time_left == '0:00:00': raise SystemExit("ERROR: No time left on grid proxy! Renew with voms-proxy-init -voms cms")
 
 # get git hash/tag
 tag_info_frontend = subprocess.getoutput("git describe --tags --long")
@@ -442,6 +429,21 @@ if args.output_cmslpc:
   else: ret = os.system("eos " + out_redirector + " rm " + output_path + "/blank.txt &> /dev/null")
   if not ret == 0: raise SystemExit('ERROR: Failed eosrm test file from output eos area!')
   os.system('rm blank.txt')
+
+# prebuild cmssw area
+import platform
+current_os = "alma8"
+if "alma" in platform.platform(): current_os = "alma8"
+elif "el9" in platform.platform(): current_os = "alma8"
+elif 'centos' in platform.platform(): current_os = "sl7"
+if args.rebuild:
+    print("Setting up src directory to ship with job...")
+    os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver + ' ' + site + ' ' + str(args.tarball) + ' ' +str(args.backend_branch))
+    print("Finished setting up directory to ship with job.\n")
+if args.ver == 'v2' and not os.path.isdir(cmssw_prebuild_area):
+  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
+if args.ver == 'v1' and not os.path.isdir(cmssw_prebuild_area_v1):
+  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 
 # splitting
 if args.numJobs==None and args.filesPerJob==None and args.jobsPerFile==None: args.filesPerJob = 1
