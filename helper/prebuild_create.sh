@@ -1,4 +1,5 @@
 #! /bin/sh
+# args: <version> <BOOL:tarball> <branch>
 
 if [[ "$1" == "v2" ]]; then
 export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
