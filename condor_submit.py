@@ -367,6 +367,21 @@ if output_not_set and site == "lxplus": args.output_lxplus = True
 if args.output_cmslpc: out_redirector = "root://cmseos.fnal.gov/"
 if args.output_hexcms: out_redirector = "root://ruhex-osgce.rutgers.edu/"
 
+# prebuild cmssw area
+import platform
+current_os = "alma8"
+if "alma" in platform.platform(): current_os = "alma8"
+elif "el9" in platform.platform(): current_os = "alma8"
+elif 'centos' in platform.platform(): current_os = "sl7"
+if args.rebuild:
+    print("Setting up src directory to ship with job...")
+    os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver + ' ' + site + ' ' + str(args.tarball) + ' ' +str(args.backend_branch))
+    print("Finished setting up directory to ship with job.\n")
+if args.ver == 'v2' and not os.path.isdir(cmssw_prebuild_area):
+  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
+if args.ver == 'v1' and not os.path.isdir(cmssw_prebuild_area_v1):
+  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
+
 # get git hash/tag
 tag_info_frontend = subprocess.getoutput("git describe --tags --long")
 tag_info_frontend = tag_info_frontend.split('-')
@@ -380,7 +395,7 @@ if args.tarball:
             if '.tgz' in item:
                 tarball_path = cmssw_prebuild_area+'/'+item
                 break
-        if not tarball_path: raise SystemExit("ERROR")
+        if not tarball_path: raise SystemExit("ERROR: --tarball selected but prebuild area has no tarball!")
         else:
             pos = tarball_path.rfind('__')
             tag_info_backend = tarball_path[pos+2:-4].split('-')
@@ -429,21 +444,6 @@ if args.output_cmslpc:
   else: ret = os.system("eos " + out_redirector + " rm " + output_path + "/blank.txt &> /dev/null")
   if not ret == 0: raise SystemExit('ERROR: Failed eosrm test file from output eos area!')
   os.system('rm blank.txt')
-
-# prebuild cmssw area
-import platform
-current_os = "alma8"
-if "alma" in platform.platform(): current_os = "alma8"
-elif "el9" in platform.platform(): current_os = "alma8"
-elif 'centos' in platform.platform(): current_os = "sl7"
-if args.rebuild:
-    print("Setting up src directory to ship with job...")
-    os.system('./' + helper_dir +'/'+ src_setup_script + ' ' + current_os + ' ' + args.ver + ' ' + site + ' ' + str(args.tarball) + ' ' +str(args.backend_branch))
-    print("Finished setting up directory to ship with job.\n")
-if args.ver == 'v2' and not os.path.isdir(cmssw_prebuild_area):
-  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
-if args.ver == 'v1' and not os.path.isdir(cmssw_prebuild_area_v1):
-  raise SystemExit("ERROR: Prebuild area not prepared, use option --rebuild to create")
 
 # splitting
 if args.numJobs==None and args.filesPerJob==None and args.jobsPerFile==None: args.filesPerJob = 1
