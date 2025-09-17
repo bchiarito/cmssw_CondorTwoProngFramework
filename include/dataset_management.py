@@ -38,6 +38,8 @@ def process(dataset, dirname):
   files = subprocess.check_output('/cvmfs/cms.cern.ch/common/dasgoclient --query="file dataset='+dataset+'"', shell=True).decode('utf-8')
   info = subprocess.check_output('/cvmfs/cms.cern.ch/common/dasgoclient --json --query="dataset='+dataset+'"', shell=True).decode('utf-8')
   parsed_info = json.loads(info)
+  if len(parsed_info)<=1:
+    raise SystemExit('Dataset Management: DAS query has no results! \nDump:\n'+json.dumps(parsed_info,indent=2))
   if not parsed_info[2]['das']['services'][0] == "dbs3:filesummaries":
     raise SystemExit('Dataset Management: Something wrong parsing dataset json query results! (sometimes just try again) \nDump:\n'+json.dumps(parsed_info,indent=2))
   parsed_info = parsed_info[2]['dataset'][0]
